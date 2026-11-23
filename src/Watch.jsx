@@ -10,7 +10,7 @@ export function narrate(e, s) {
   const mole = (id) => cat(id)?.mole
   const A = N(e.actor), T = N(e.target)
   switch (e.type) {
-    case 'start': return { big: `Five cats. One traitor: ${N(s.mole)}.`, small: 'Only you know that. The crew does not.' }
+    case 'start': return { big: `${N(s.mole)} is the traitor.`, small: 'The dogs promised them all 9 million fish if this heist fails. The crew has no idea.' }
     case 'kill': return { big: `${A} kills ${T}${e.data.how === 'claw' ? ' silently, from behind' : ' with a single shot'}.`, small: mole(e.actor) ? 'The traitor strikes. Did anyone see?' : mole(e.target) ? 'That was the traitor!' : `${T} was innocent.`, hot: true }
     case 'witnessed': return { big: `${A} SAW ${T} do it!`, small: 'One witness can end the traitor.', hot: true }
     case 'scuffle': return { big: `${A} lunges at ${T}, but is seen coming.`, small: 'Attacks only kill from behind.', hot: true }

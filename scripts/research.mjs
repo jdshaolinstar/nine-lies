@@ -77,7 +77,7 @@ const pick = (k) => (typeof skin[k] === 'string' && skin[k].length < 260 ? skin[
 const scenario = {
   ...DEFAULT_SCENARIO, id: `viral-${top.id}`, title: pick('title'), villain: pick('villain'), villainLine: pick('villainLine'), target: pick('target'), briefing: pick('briefing'),
   setPiece: top.id,
-  why: `Telem read ${pages.length} pages about the spy and heist scenes people love. ${SET_PIECES[top.id].split(':')[0]} led with ${top.pages}.`,
+  why: `Telem found ${pages.length} pages about the spy and heist scenes people love. ${SET_PIECES[top.id].split(':')[0]} led with ${top.pages}.`,
   sources: top.sources, board: board.map(({ id, pages: n, score }) => ({ id, pages: n, score })), researchedAt: new Date().toISOString(),
 }
 fs.mkdirSync('data', { recursive: true })

@@ -125,7 +125,7 @@ export default function Hud({ s, send, scan, scenario }) {
           <ul>
             <li><b>Follow the glowing dots.</b> They always lead to your next step.</li>
             <li><b>Stay out of the dogs&apos; light cones.</b> Shift to run, C to sneak.</li>
-            <li><b>One of your four crewmates is a traitor.</b> Watch your back.</li>
+            <li><b>One crewmate is paid by the dogs.</b> If time runs out, they win.</li>
           </ul>
           <p className="dim">Move with WASD to begin</p>
         </div>
