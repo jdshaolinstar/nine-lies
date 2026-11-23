@@ -79,7 +79,7 @@ export class GameView {
       t.material.opacity = 0.34
       const p = new THREE.Mesh(new THREE.PlaneGeometry(t.scale.x * 1.5, 0.95), new THREE.MeshBasicMaterial({ map: t.material.map, transparent: true, opacity: 0.4, depthWrite: false }))
       p.rotation.x = -Math.PI / 2
-      p.position.set(r.x + r.w / 2, 0.03, r.id === 'vault' ? r.z + r.h - 0.5 : r.z + r.h - 0.8)
+      p.position.set(r.x + r.w / 2, 0.03, r.id === 'vault' ? r.z + 0.6 : r.z + r.h - 1.9)
       s.add(p)
       if (r.cam) {
         const cam = new THREE.Group()
@@ -183,6 +183,12 @@ export class GameView {
     hp.position.set(HELIPAD.x, 0.05, HELIPAD.z)
     s.add(hp)
 
+    this.beams = Array.from({ length: 4 }, () => {
+      const b = new THREE.Mesh(geo.box, new THREE.MeshBasicMaterial({ color: '#ff2a44', transparent: true, opacity: 0.85 }))
+      b.visible = false
+      s.add(b)
+      return b
+    })
     // The weapon: a glowing core, with a red dot that wanders like a toy.
     this.coreGroup = new THREE.Group()
     add(this.coreGroup, geo.cyl, mat('#2a2d3c', { metalness: 0.6 }), [0, 0.3, 0], [0.5, 0.6, 0.5])
@@ -399,6 +405,14 @@ export class GameView {
         ring.material.color.set(s.vaultOpen ? '#8dff9d' : g.held ? '#ffd23e' : '#3cf2ff')
         ring.scale.setScalar(1 + Math.sin(t * 4) * (g.held ? 0.08 : 0.03))
       }
+      this.beams.forEach((b, i) => {
+        const l = s.lasers?.[i]
+        b.visible = !!l
+        if (!l) return
+        const [x1, z1, x2, z2] = l
+        b.position.set((x1 + x2) / 2, 0.55, (z1 + z2) / 2)
+        b.scale.set(Math.max(0.05, x2 - x1), 0.05, Math.max(0.05, z2 - z1))
+      })
       const core = s.core
       const onPad = !core.taken
       this.coreBeam.visible = onPad

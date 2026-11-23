@@ -50,7 +50,7 @@ export default function App() {
       if (last && last.id > heard.current) {
         if (heard.current >= 0 || last.id < 3) {
           sfx('radio')
-          if (last.from !== s.you) speak(last.from, last.text, statusRef.current?.services?.tts)
+          if (last.from !== s.you) speak(last.from, last.text, statusRef.current?.services?.voices)
         }
         heard.current = last.id
       }
@@ -89,7 +89,7 @@ export default function App() {
   return (
     <div className="app">
       <div className={'stage' + (showHacker ? ' hidden' : '')}><canvas ref={canvas} /></div>
-      {!role && <Menu status={status} enter={enter} name={name} setName={setName} scenario={lobby?.scenario ?? DEFAULT_SCENARIO} />}
+      {!role && <Menu status={status} enter={enter} name={name} setName={setName} scenario={status?.scenario ?? DEFAULT_SCENARIO} />}
       {role && !inMatch && <Lobby lobby={lobby} status={status} send={send} role={role} net={net} />}
       {snap?.phase === 'play' && role === 'runner' && <Hud s={snap} send={send} scan={scan} scenario={lobby?.scenario ?? DEFAULT_SCENARIO} />}
       {showHacker && <Hacker s={snap} send={send} scan={scan} />}
@@ -107,6 +107,7 @@ function Menu({ status, enter, name, setName, scenario }) {
       <h1>Nine<span>Lies</span></h1>
       <p className="brief"><b>{scenario.villain}:</b> “{scenario.villainLine}”</p>
       <p className="brief dim">{scenario.briefing}</p>
+      {scenario.why && <p className="why"><b>Why this mission:</b> {scenario.why}<br />{scenario.sources?.slice(0, 3).map((u) => <a key={u.url} href={u.url} target="_blank" rel="noreferrer">{u.title.slice(0, 40)}</a>)}</p>}
       <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Code name (optional)" maxLength={14} aria-label="Code name" />
       <div className="row">
         <button className="big" onClick={() => enter('solo', 'runner')}>Play now</button>

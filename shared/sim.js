@@ -40,7 +40,9 @@ const KILL_GRACE = 25 // nobody can be killed in the first seconds
 const VOTE_SECONDS = 15
 
 export class Match {
-  constructor({ seed = Date.now() % 1e9, humans = [], moleId, tactic, onEvent, thinker, catNames = {} } = {}) {
+  constructor({ seed = Date.now() % 1e9, humans = [], moleId, tactic, onEvent, thinker, catNames = {}, setPiece = 'wire_drop' } = {}) {
+    this.setPiece = setPiece
+    this.lasers = []
     this.rng = makeRng(seed)
     this.seed = seed
     this.t = 0
@@ -207,7 +209,7 @@ export class Match {
       o.suspicion[actor.id] = 1
       this.note(o, `I SAW ${actor.name} ${what} in ${roomName(roomOf(actor))}`, { about: actor.id, crime: true })
       this.log('witnessed', o.id, actor.id, { what, room: roomOf(actor) })
-      o.nextThink = this.t + 0.2
+      o.nextThink = this.t + 0.2; o.urgent = true
     }
   }
 
@@ -278,25 +280,50 @@ export class Match {
     this.radio.push(msg)
     this.log('radio', from, to === 'all' ? null : to, { kind, room, cat: msg.cat, text: msg.text, trueRoom: truth })
     this.onRadio?.(msg)
-    for (const o of this.alive()) {
-      if (o === f || (to !== 'all' && to !== o.id)) continue
+    const hear = (o, via) => {
+      if (this.phase !== 'play' || o.state !== 'ok') return
+      if (via) msg.via = via
       this.note(o, `${f.name} said${to !== 'all' ? ' (whisper)' : ''}: "${msg.text}"`, { told: from })
       onHeard(this, o, msg)
     }
+    const ears = this.alive().filter((o) => o !== f && (to === 'all' || to === o.id))
+    const remote = this.transport ? ears.filter((o) => !this.humans.has(o.id)) : []
+    for (const o of ears) if (!remote.includes(o)) hear(o)
+    if (remote.length) this.transport.send(this, msg, remote.map((o) => o.id), (id, via) => hear(this.cat(id), via))
     return msg
   }
 
   // The mole's private line to the dog captain.
   leak(room, why) {
     if (this.mole.state !== 'ok') return
+    this.log('leak', this.moleId, null, { room, why })
+    if (this.transport) this.transport.leak(this, room, why, () => this.captainHears(room, why))
+    else this.captainHears(room, why)
+  }
+
+  captainHears(room, why) {
+    if (this.phase !== 'play') return
     this.captain.focus = room
     this.captain.until = this.t + 22
-    this.captain.intel.push({ t: this.t, room, why })
-    this.log('leak', this.moleId, null, { room, why })
-    this.onLeak?.({ room, why })
+    this.captain.intel.push({ t: this.t, text: `Mole says: ${why} (${roomName(room)})` })
     this.decideLog('captain', 'rule', `Send two dogs to ${roomName(room)}`, `Tip from inside the crew: ${why}`, true)
     this.dogs.filter((d) => d.state === 'patrol').sort((a, b) => dist(a, roomCenter(room)) - dist(b, roomCenter(room)))
       .slice(0, 1).forEach((d) => this.sendDog(d, roomCenter(room), 'leak'))
+  }
+
+  captainOrders({ orders = [], reason = '', taunt = '' }) {
+    if (this.phase !== 'play') return
+    for (const o of orders.slice(0, 2)) {
+      const d = this.dogs.find((k) => k.id === o?.dog)
+      if (!d || !ROOM[o.room] || o.room === 'vault' || d.state !== 'patrol') continue
+      this.sendDog(d, roomCenter(o.room), 'captain')
+      this.decideLog('captain', 'llm', `Send ${d.id} to ${roomName(o.room)}`, String(reason).slice(0, 110), true)
+    }
+    if (taunt) {
+      const msg = { id: this.radio.length, t: +this.t.toFixed(1), from: 'captain', to: 'all', kind: 'taunt', room: null, cat: null, source: 'llm', text: String(taunt).slice(0, 80) }
+      this.radio.push(msg)
+      this.log('radio', null, null, { from: 'captain', kind: 'taunt', text: msg.text })
+    }
   }
 
   callVote(from) {
@@ -408,7 +435,7 @@ export class Match {
               if (this.t - ls.t < 18 && ls.room === room) c.suspicion[k.id] = Math.min(1, (c.suspicion[k.id] ?? 0) + 0.4)
             }
           }
-          c.nextThink = this.t + 0.3
+          c.nextThink = this.t + 0.3; c.urgent = true
         } else if (o.state === 'captured') c.known[o.id] = 'captured'
       }
       for (const d of this.dogs) if (this.canSee(c, d)) c.seen.add(d.id)
@@ -431,6 +458,7 @@ export class Match {
     if (this.t >= this.visionAt) { this.visionAt = this.t + 0.1; this.updateVision() }
     for (const c of this.cats) if (c.state === 'ok') this.stepCat(c, dt)
     for (const d of this.dogs) this.stepDog(d, dt)
+    this.stepSetPiece(dt)
     this.stepObjectives(dt)
     this.stepCameras(dt)
     if (this.vote) {
@@ -443,6 +471,11 @@ export class Match {
       }
       const voters = this.alive().length
       if (this.t >= this.vote.until || Object.keys(this.vote.votes).length >= voters) this.endVote()
+    }
+    if (this.captainThinker && this.t > (this.captain.next ?? 8) && !this.captain.thinking) {
+      this.captain.thinking = true
+      this.captain.next = this.t + 15
+      Promise.resolve(this.captainThinker(this)).then((p) => p && this.captainOrders(p)).catch(() => {}).finally(() => { this.captain.thinking = false })
     }
     if (this.timeLeft <= 0) this.finish('mole', 'The Red Dot fired.')
   }
@@ -477,25 +510,33 @@ export class Match {
   // --- agent control: the plan comes from a brain, the moving happens here -----------
 
   think(c) {
-    const fallback = () => this.setIntent(c, decide(this, c), 'rule')
-    if (!c.intent) fallback()
-    if (!this.thinker || c.thinking || c.llmOff > this.t) { if (!c.thinking) fallback(); c.nextThink = this.t + 3 + this.rng() * 2; return }
-    c.thinking = true
-    c.nextThink = this.t + 10 + this.rng() * 4
-    const started = this.t
-    Promise.resolve(this.thinker(this, c)).then((intent) => {
-      c.thinking = false
-      if (this.phase !== 'play' || c.state !== 'ok') return
-      if (intent) this.setIntent(c, intent, 'llm')
-      else { c.llmOff = this.t + 15; fallback() }
-      c.thinkTook = this.t - started
-    }).catch(() => { c.thinking = false; c.llmOff = this.t + 15 })
+    const i = c.intent
+    // Don't flip-flop: let a wander or a tail play out unless something changed.
+    const settled = i && this.t - i.since < 7 && ['goto', 'follow'].includes(i.goal) && !c.urgent
+    c.urgent = false
+    if (this.thinker && !c.thinking && !(c.llmOff > this.t)) {
+      const hint = decide(this, c)
+      if (!i) this.setIntent(c, hint, 'rule')
+      c.thinking = true
+      c.nextThink = this.t + 9 + this.rng() * 4
+      const started = this.t
+      Promise.resolve(this.thinker(this, c, hint)).then((plan) => {
+        c.thinking = false
+        c.thinkTook = this.t - started
+        if (this.phase !== 'play' || c.state !== 'ok') return
+        if (plan) this.setIntent(c, plan, 'llm')
+        else { c.llmOff = this.t + 12; this.setIntent(c, hint, 'rule') }
+      }).catch(() => { c.thinking = false; c.llmOff = this.t + 12 })
+      return
+    }
+    if (!c.thinking && !settled) this.setIntent(c, decide(this, c), 'rule')
+    c.nextThink = this.t + 3 + this.rng() * 2
   }
 
   setIntent(c, i, source) {
     if (!i?.goal) return
     if (['hunt', 'shoot', 'follow', 'rescue'].includes(i.goal) && (!this.cat(i.cat) || i.cat === c.id)) return
-    if (['hunt'].includes(i.goal) && !c.isMole && (c.suspicion[i.cat] ?? 0) < 0.5) return
+    if (['hunt'].includes(i.goal) && !c.isMole && !c.turned && (c.suspicion[i.cat] ?? 0) < 0.5) return
     if (i.goal === 'goto' && !ROOM[i.room]) return
     const same = c.intent && c.intent.goal === i.goal && c.intent.room === i.room && c.intent.cat === i.cat
     c.intent = { ...i, source, since: same ? c.intent.since : this.t }
@@ -640,6 +681,7 @@ export class Match {
     }
     if (best && d.chase !== best.id && d.state !== 'chase') {
       this.log('spotted', d.id, best.id, { room: roomOf(best) })
+      this.captain.intel.push({ t: this.t, text: `${d.id} spotted a cat in ${roomName(roomOf(best))}` })
       d.state = 'chase'; d.chase = best.id; d.lost = 0; d.path = null; d.bark = 0.7
     }
     let target = null, speed = 2
@@ -691,9 +733,52 @@ export class Match {
       const c = this.alive().find((o) => !o.isMole && roomOf(o) === r.id)
       if (c && this.rng() < dt * 0.014) {
         this.log('camera', null, c.id, { room: r.id })
+        this.captain.intel.push({ t: this.t, text: `Camera saw a cat in ${r.name}` })
         this.dogs.filter((d) => d.state === 'patrol').sort((a, b) => dist(a, c) - dist(b, c)).slice(0, 1).forEach((d) => this.sendDog(d, c, 'camera'))
         this.fx.push({ kind: 'camera', ...roomCenter(r.id), t: this.t })
       }
+    }
+  }
+
+  // One spy-film moment per match, chosen by the scenario.
+  stepSetPiece(dt) {
+    if (this.setPiece === 'laser_hall') {
+      // Beams sweep the ring around the vault.
+      const s = (k, p) => Math.sin(this.t * k + p)
+      this.lasers = [
+        { x1: 15.5 + 1.2 * s(0.9, 0), z1: 11, x2: 15.5 + 1.2 * s(0.9, 0), z2: 21 },
+        { x1: 26.2 + 1.2 * s(1.1, 2), z1: 11, x2: 26.2 + 1.2 * s(1.1, 2), z2: 21 },
+        { x1: 17, z1: 12 + 0.8 * s(1.3, 1), x2: 25, z2: 12 + 0.8 * s(1.3, 1) },
+        { x1: 17, z1: 19.9 + 0.8 * s(1, 4), x2: 25, z2: 19.9 + 0.8 * s(1, 4) },
+      ]
+      for (const c of this.alive()) {
+        if (c.isMole || (c.zapAt ?? -9) > this.t - 3) continue
+        const hit = this.lasers.some((l) => (l.x1 === l.x2 ? Math.abs(c.x - l.x1) < 0.28 && c.z > l.z1 && c.z < l.z2 : Math.abs(c.z - l.z1) < 0.28 && c.x > l.x1 && c.x < l.x2))
+        if (!hit) continue
+        c.zapAt = this.t
+        c.stun = Math.max(c.stun, 0.5)
+        this.fx.push({ kind: 'alarm', x: c.x, z: c.z, t: this.t })
+        this.log('laser', c.id, null)
+        this.noise(c, 10, 'laser')
+      }
+    } else if (this.setPiece === 'blackout') {
+      this.autoDark ??= [70, 150]
+      if (this.autoDark.length && this.t > this.autoDark[0]) { this.autoDark.shift(); this.blackout = 10; this.log('power_cut', null, null) }
+    } else if (this.setPiece === 'rooftop' && this.core.taken && !this.hurried) {
+      this.hurried = true
+      this.t = Math.max(this.t, MATCH_SECONDS - 45)
+      for (const c of this.cats) { c.nextThink = Math.min(c.nextThink, this.t); c.llmOff = 0 }
+      this.log('pilot_leaving', null, null)
+    } else if (this.setPiece === 'double_cross' && this.core.taken && !this.turned) {
+      // Greed: with the core out, one loyal agent decides to keep it all.
+      const pool = this.alive().filter((c) => !c.isMole && !this.humans.has(c.id) && this.core.by !== c.id)
+      if (pool.length) {
+        this.turned = this.rng.pick(pool)
+        this.turned.turned = true
+        this.turned.nextThink = this.t + 2
+        this.decideLog(this.turned.id, 'rule', 'Turn on the crew', 'Why split nine million fish?', true)
+        this.log('turned', this.turned.id, null)
+      } else this.turned = true
     }
   }
 
@@ -780,6 +865,7 @@ export class Match {
       gens: this.gens.map((g) => ({ id: g.id, held: g.held })), genProgress: f(this.genProgress), vaultOpen: this.vaultOpen,
       core: god || role === 'hacker' || !this.core.taken || (me && (this.core.by === me.id || me.seen.has(this.core.by) || (!this.core.by && this.canSee(me, this.core))))
         ? { x: f(this.core.x), z: f(this.core.z), by: this.core.by, taken: this.core.taken } : { taken: true, hidden: true },
+      setPiece: this.setPiece, lasers: this.lasers.map((l) => [f(l.x1), f(l.z1), f(l.x2), f(l.z2)]),
       locked: [...this.locked], blackout: f(this.blackout), camLoop: Object.keys(this.camLoop),
       hackCd: Object.fromEntries(Object.entries(this.hackCd).map(([k, v]) => [k, f(v)])),
       cats: this.cats.filter(showCat).map((c) => ({
@@ -804,7 +890,7 @@ export class Match {
       sealed: god ? 0 : this.ledger.length,
       result: this.result,
       ...(god ? { mole: this.moleId, tactic: this.tactic } : {}),
-      ...(this.phase === 'end' ? { story: this.events.filter((e) => ['kill', 'captured', 'rescued', 'leak', 'gunshot', 'vote_result', 'vault_open', 'core_taken', 'scuffle', 'end', 'body_found'].includes(e.type)) } : {}),
+      ...(this.phase === 'end' ? { story: this.events.filter((e) => ['kill', 'captured', 'rescued', 'leak', 'gunshot', 'vote_result', 'vault_open', 'core_taken', 'scuffle', 'end', 'body_found', 'turned', 'pilot_leaving', 'power_cut'].includes(e.type)) } : {}),
     }
   }
 }

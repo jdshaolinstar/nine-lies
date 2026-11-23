@@ -31,7 +31,7 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/health') return res.end('ok')
   if (url.pathname === '/api/status') {
     res.setHeader('content-type', 'application/json')
-    return res.end(JSON.stringify({ services: services.status(), lan: lanAddress(), port: PORT, publicUrl: process.env.PUBLIC_URL ?? null }))
+    return res.end(JSON.stringify({ services: services.status(), scenario: services.scenario, detail: url.searchParams.has('debug') && !req.headers['x-forwarded-for'] ? services.detail() : undefined, lan: lanAddress(), port: PORT, publicUrl: process.env.PUBLIC_URL ?? null }))
   }
   if (url.pathname === '/api/tts') return services.tts(url, res)
   // Only files inside dist are ever served.
@@ -68,4 +68,4 @@ function lanAddress() {
   return 'localhost'
 }
 
-server.listen(PORT, '0.0.0.0', () => console.log(`Nine Lies on http://localhost:${PORT}  (LAN: http://${lanAddress()}:${PORT})`, services.status()))
+server.listen(PORT, () => console.log(`Nine Lies on http://localhost:${PORT}  (LAN: http://${lanAddress()}:${PORT})`, services.status()))

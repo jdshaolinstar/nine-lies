@@ -3,25 +3,67 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { TACTICS } from '../shared/brain.js'
+import { DEFAULT_SCENARIO } from '../shared/scenario.js'
+import { thinkerFor, captainFor, chat, llmStats } from './llm.js'
+import { connectBand, bandStats } from './band.js'
+import { connectWarehouse, alibiScanner, learnedTactics, bruinQuery, whStats } from './warehouse.js'
+import { tts, ttsReady } from './tts.js'
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const DATA = path.join(ROOT, 'data')
+const env = process.env
 
 export async function createServices() {
-  const readJson = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')) } catch { return undefined } }
-  const state = { llm: false, band: false, bruin: false, db: false, tts: false, telem: !!process.env.TELEM_API_KEY }
-  const learning = readJson(path.join(DATA, 'learning.json'))
-  const scenario = readJson(path.join(DATA, 'scenario.json'))
+  fs.mkdirSync(DATA, { recursive: true })
+  const readJson = (f) => { try { return JSON.parse(fs.readFileSync(path.join(DATA, f), 'utf8')) } catch { return undefined } }
+  const scenario = { ...DEFAULT_SCENARIO, ...readJson('scenario.json') }
+  const state = { llm: false, band: false, postgres: false, bruin: false, voices: false }
+  const problems = {}
+  const attempt = async (name, fn) => {
+    try { await fn(); state[name] = true } catch (e) { problems[name] = e.message; console.error(`${name} is off:`, e.message) }
+  }
+
+  let wh, band
+  const learning = { ...Object.fromEntries(TACTICS.map((t) => [t, { wins: 0, plays: 0 }])), ...readJson('learning.json') }
+  if (env.RUNWARE_API_KEY) await attempt('llm', () => chat([{ role: 'user', content: 'Reply with the word ok' }], { maxTokens: 40, timeout: 15000 }))
+  if (env.DATABASE_URL) await attempt('postgres', async () => { wh = await connectWarehouse(ROOT) })
+  if (env.BRUIN_TOKEN && env.BRUIN_CONNECTION_SET_ID && wh) {
+    await attempt('bruin', async () => {
+      await bruinQuery('select 1 as ok')
+      const t = await learnedTactics()
+      for (const k of Object.keys(t)) if (learning[k]) learning[k] = t[k]
+    })
+  }
+  if (fs.existsSync(path.join(DATA, 'band-agents.json'))) await attempt('band', async () => { band = await connectBand(DATA) })
+  state.voices = ttsReady()
 
   const hooks = {
-    onEnd(match, table) {
-      fs.mkdirSync(DATA, { recursive: true })
+    thinkerFor: () => (state.llm ? thinkerFor() : null),
+    scanner: state.bruin ? alibiScanner(wh) : undefined,
+    onEvent: wh ? (id, e) => wh.event(id, e) : undefined,
+    onMatch(m) {
+      if (band) m.transport = band
+      if (state.llm) m.captainThinker = captainFor(scenario)
+    },
+    async onEnd(m, table) {
       fs.writeFileSync(path.join(DATA, 'learning.json'), JSON.stringify(table, null, 2))
+      if (!wh) return
+      try {
+        await wh.flush()
+        await wh.match(m, state.llm)
+        // Bruin is the source of truth for what the mole has learned.
+        if (state.bruin) {
+          const t = await learnedTactics()
+          for (const k of Object.keys(t)) if (table[k]) table[k] = t[k]
+        }
+      } catch (e) { whStats.lastError = e.message }
     },
   }
   return {
     hooks, learning, scenario,
     status: () => ({ ...state }),
-    tts: (url, res) => { res.statusCode = 404; res.end() },
+    detail: () => ({ problems, llm: llmStats, band: bandStats, warehouse: whStats }),
+    tts,
   }
 }

@@ -117,6 +117,7 @@ export class Session {
       seed: Math.floor(Math.random() * 1e9),
       humans: humans.map((c) => c.catId),
       tactic: this.pickTactic(),
+      setPiece: this.scenario.setPiece,
       catNames: Object.fromEntries(humans.filter((c) => c.name !== 'Guest').map((c) => [c.catId, c.name])),
       onEvent: (e) => this.onEvent?.(id, e),
     })

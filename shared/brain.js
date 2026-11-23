@@ -15,6 +15,11 @@ export function decide(m, c) {
   if (order && m.t - order.t < 9 && !c.isMole && m.core.by !== c.id) {
     if (order.kind === 'regroup' || order.kind === 'help') return { goal: 'goto', room: order.room, reason: `${CAT_NAME[order.from]} called ${order.kind}` }
   }
+  if (c.turned && m.core.by !== c.id) {
+    const carrier = m.core.by ? m.cat(m.core.by) : null
+    if (carrier && c.seen.has(carrier.id)) return c.bullets > 0 ? { goal: 'shoot', cat: carrier.id, reason: 'The core is mine now' } : { goal: 'hunt', cat: carrier.id, bold: true, reason: 'The core is mine now' }
+    return { goal: carrier ? 'escape' : 'core', reason: 'Get there first' }
+  }
   return c.isMole ? moleDecide(m, c) : loyalDecide(m, c)
 }
 
@@ -170,6 +175,7 @@ export function onHeard(m, c, msg) {
   if (['regroup', 'help', 'going'].includes(msg.kind)) {
     if (msg.kind !== 'going' || m.humans.has(msg.from)) c.orders.push({ t: m.t, kind: msg.kind, room: msg.room, from: msg.from })
     if (c.orders.length > 6) c.orders.shift()
+    if (m.humans.has(msg.from)) c.urgent = true
     if (m.humans.has(msg.from)) c.nextThink = Math.min(c.nextThink, m.t + 0.4 + m.rng() * 0.8)
   }
   if (c.isMole && msg.kind === 'going' && m.humans.has(msg.from) && m.t - (c.leakAt ?? -99) > 14 && m.rng() < 0.6) {

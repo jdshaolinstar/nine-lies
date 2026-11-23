@@ -1,0 +1,4 @@
+name: nine_lies
+schedule: hourly
+default_connections:
+  postgres: warehouse

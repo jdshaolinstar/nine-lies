@@ -107,7 +107,9 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--gold); outl
 .result h1.crew { color: var(--mint); } .result h1.mole { color: var(--red); }
 .learn { margin: 16px 0; font-size: 13px; } .learn h3 { margin: 0 0 6px; }
 .learn > div { display: grid; grid-template-columns: 120px 1fr 70px; gap: 8px; align-items: center; padding: 3px 0; opacity: 0.7; } .learn .now { opacity: 1; font-weight: 700; } .learn .bar { width: 100%; }
-.story p { margin: 5px 0; font-size: 14px; } .story .kill { color: #ff8090; font-weight: 700; } .story .leak { color: var(--gold); } .story .vault_open, .story .core_taken { color: var(--mint); }
+.story p { margin: 5px 0; font-size: 14px; } .story .ev-kill, .story .ev-turned { color: #ff8090; font-weight: 700; } .story .ev-leak { color: var(--gold); } .story .ev-vault_open, .story .ev-core_taken { color: var(--mint); }
+.why { max-width: 52ch; font-size: 13px; margin: 0; padding: 8px 12px; border-left: 3px solid var(--mint); background: #0a0d1a99; border-radius: 0 8px 8px 0; }
+.why a { color: var(--mint); margin-right: 10px; }
 
 .hacker { position: fixed; inset: 0; background: #03110c; color: #a8ffdc; display: flex; flex-direction: column; font-family: ui-monospace, Consolas, monospace; padding: env(safe-area-inset-top) 8px 8px; }
 .hk-top { display: flex; justify-content: space-between; padding: 8px 6px; font-size: 18px; }

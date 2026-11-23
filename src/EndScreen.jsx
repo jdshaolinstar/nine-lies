@@ -23,7 +23,10 @@ export default function EndScreen({ s, learning, again }) {
       case 'vote_result': return e.target ? `The crew cut ${T} loose (${e.data.wasMole ? 'the mole' : 'loyal'})` : 'The vote was split'
       case 'vault_open': return 'Both generators held: the vault opened'
       case 'core_taken': return `${A} took the core`
-      case 'body_found': return `${A} found ${T}'s body`
+      case 'body_found': return s.story.some((k) => k.type === 'kill' && k.actor === e.actor && k.target === e.target) ? null : `${A} found ${T}'s body`
+      case 'turned': return `${A} got greedy and turned on the crew`
+      case 'pilot_leaving': return 'The pilot started counting down'
+      case 'power_cut': return 'The power went out'
       case 'end': return r.why
       default: return null
     }
@@ -47,7 +50,7 @@ export default function EndScreen({ s, learning, again }) {
       </div>
       <div className="panel story">
         <h3>What really happened</h3>
-        {s.story.map((e, i) => { const l = line(e); return l && <p key={i} className={e.type}><time>{clock(e.t)}</time>{l}</p> })}
+        {s.story.map((e, i) => { const l = line(e); return l && <p key={i} className={'ev-' + e.type}><time>{clock(e.t)}</time>{l}</p> })}
       </div>
       <div className="panel"><Ledger s={s} full /></div>
     </div>

@@ -171,8 +171,8 @@ export function Crew({ s, onWhisper }) {
 }
 
 export function Radio({ s }) {
-  const name = (id) => s.crew.find((c) => c.id === id)?.name ?? 'Hacker'
-  const color = (id) => s.crew.find((c) => c.id === id)?.color ?? '#9fe0ff'
+  const name = (id) => s.crew.find((c) => c.id === id)?.name ?? (id === 'captain' ? 'LOUDSPEAKER' : 'Hacker')
+  const color = (id) => s.crew.find((c) => c.id === id)?.color ?? (id === 'captain' ? '#ff9a30' : '#9fe0ff')
   return (
     <div className="radio">
       {s.radio.slice(-6).map((m) => (

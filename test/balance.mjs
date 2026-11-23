@@ -3,12 +3,13 @@ import { Match } from '../shared/sim.js'
 import { walkable } from '../shared/nav.js'
 
 const N = +process.argv[2] || 40
+const PIECES = ['wire_drop', 'laser_hall', 'blackout', 'rooftop', 'double_cross']
 const tally = {}
 const count = (k, n = 1) => { tally[k] = (tally[k] ?? 0) + n }
 let time = 0
 const started = Date.now()
 for (let s = 1; s <= N; s++) {
-  const m = new Match({ seed: s * 7919 })
+  const m = new Match({ seed: s * 7919, setPiece: PIECES[s % 5] })
   let steps = 0
   while (m.phase === 'play' && steps++ < 20 * 260) {
     m.step(1 / 20)
@@ -19,6 +20,7 @@ for (let s = 1; s <= N; s++) {
   if (m.phase !== 'end') throw Error(`seed ${s} never ended`)
   for (const role of [['runner', 'ace'], ['hacker'], ['director']]) JSON.stringify(m.viewFor(...role))
   count(`win:${m.result.winner}`)
+  count(`piece:${m.setPiece}:${m.result.winner}`)
   count(`tactic:${m.tactic}:${m.result.winner}`)
   count(`why:${m.result.why.replace(/^\w+ got/, 'X got')}`)
   if (m.result.moleCaught) count('moleCaught')

@@ -51,8 +51,8 @@ export function sfx(kind) {
 }
 
 // A distinct voice for each cat. Server voices first, browser speech as backup.
-const PITCH = { ace: 1.1, domino: 0.9, velvet: 1.45, boots: 0.65, sable: 1.2, hacker: 1 }
-const RATE = { ace: 1.2, domino: 1.15, velvet: 1.25, boots: 1.1, sable: 1.4, hacker: 1.2 }
+const PITCH = { ace: 1.1, domino: 0.9, velvet: 1.45, boots: 0.65, sable: 1.2, hacker: 1, captain: 0.3 }
+const RATE = { ace: 1.2, domino: 1.15, velvet: 1.25, boots: 1.1, sable: 1.4, hacker: 1.2, captain: 0.95 }
 let queue = Promise.resolve()
 let queued = 0
 export function speak(who, text, useServer, base = '') {

@@ -64,6 +64,8 @@ export default function Hacker({ s, send, scan }) {
         g.fillRect(px(x1), px(z1), px(x2 - x1 + 1), px(z2 - z1 + 1))
         if (toolRef.current === 'door' && !d.vault) { g.strokeStyle = '#ffffff88'; g.strokeRect(px(x1) - 3, px(z1) - 3, px(x2 - x1 + 1) + 6, px(z2 - z1 + 1) + 6) }
       }
+      g.strokeStyle = '#ff3048'; g.lineWidth = 2
+      for (const [x1, z1, x2, z2] of st.lasers ?? []) { g.beginPath(); g.moveTo(px(x1), px(z1)); g.lineTo(px(x2), px(z2)); g.stroke() }
       for (const d of st.dogs) {
         g.save()
         g.translate(px(d.x), px(d.z))

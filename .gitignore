@@ -7,3 +7,6 @@ dist
 .lingcode/
 .docs-private/
 *.log
+data/
+.bruin.yml
+bruin/logs/
