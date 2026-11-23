@@ -64,11 +64,14 @@ setInterval(() => {
 }, 50)
 
 function lanAddress() {
+  const found = []
   for (const [name, list] of Object.entries(os.networkInterfaces())) {
     if (/vmware|virtual|vethernet|wsl|docker|loopback/i.test(name)) continue
-    for (const i of list) if (i.family === 'IPv4' && !i.internal && !i.address.startsWith('172.') && !i.address.startsWith('169.')) return i.address
+    for (const i of list) if (i.family === 'IPv4' && !i.internal && !i.address.startsWith('169.')) found.push({ name, address: i.address })
   }
-  return 'localhost'
+  // The real network first; hotspot adapters also have private addresses.
+  found.sort((a, b) => /^(wi-?fi|wlan|en0)/i.test(b.name) - /^(wi-?fi|wlan|en0)/i.test(a.name))
+  return found[0]?.address ?? 'localhost'
 }
 
 server.listen(PORT, () => console.log(`Nine Lies on http://localhost:${PORT}  (LAN: http://${lanAddress()}:${PORT})`, services.status()))
