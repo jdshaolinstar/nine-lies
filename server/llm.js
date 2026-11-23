@@ -14,7 +14,7 @@ export async function chat(messages, { maxTokens = 220, timeout = 8000, temperat
   const r = await fetch(URL, {
     method: 'POST',
     headers: { authorization: `Bearer ${process.env.RUNWARE_API_KEY}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ model: process.env.LLM_MODEL || 'minimax:m3@0', messages, max_tokens: maxTokens, temperature }),
+    body: JSON.stringify({ model: process.env.LLM_MODEL || 'google:gemini@3.5-flash-lite', messages, max_tokens: maxTokens, ...(/claude/.test(process.env.LLM_MODEL ?? '') ? {} : { temperature }) }),
     signal: AbortSignal.timeout(timeout),
   })
   const text = await r.text()
