@@ -160,3 +160,9 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--gold); outl
 .debug p b { color: var(--v); } .debug time { opacity: 0.45; margin-right: 6px; } .debug em { float: right; font-style: normal; opacity: 0.6; margin-left: 8px; } .debug .bad em { color: #ff8090; opacity: 1; }
 .dbg .feed, .dbg .ledger:not(.full) { display: none; } .dbg .suspect, .dbg .scan { right: 378px; } .dbg .caption { max-width: 46vw; }
 .vt { display: grid; gap: 6px; } .vt > div { border-left: 4px solid var(--v); padding: 4px 10px; background: #ffffff0a; border-radius: 0 8px 8px 0; font-size: 13px; } .vt b { color: var(--v); margin-right: 8px; } .vt small { display: block; opacity: 0.65; } .vt .off { opacity: 0.4; }
+
+.keybar { position: fixed; left: 0; right: 0; bottom: 0; height: 30px; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 0 12px; background: #05070fe0; border-top: 1px solid var(--line); font-size: 12px; z-index: 20; }
+.keybar > div { display: flex; gap: 14px; overflow: hidden; white-space: nowrap; } .keybar span { opacity: 0.85; }
+.keybar kbd { font: 700 11px ui-monospace, monospace; color: #000; background: var(--gold); border-radius: 4px; padding: 1px 5px; margin-right: 5px; }
+.keybar button { background: #1b2342; border: 1px solid var(--line); border-radius: 99px; padding: 2px 12px; font-size: 12px; white-space: nowrap; } .keybar button.on { border-color: var(--mint); color: var(--mint); }
+.actions { bottom: 40px; } .todo { bottom: 128px; } .tip { bottom: 186px; } .wheel { bottom: 120px; } .radio { bottom: 42px; } .mini { bottom: 42px; } .caption { bottom: calc(5vh + 34px); } .svc.corner { bottom: 34px; } .hacker .radio { bottom: auto; } .end { padding-bottom: 46px; } .menu { padding-bottom: 46px; }

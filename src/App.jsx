@@ -118,7 +118,7 @@ export default function App() {
       {snap?.phase === 'play' && role === 'director' && !CINE && <Director s={snap} scan={scan} services={lobby?.services} />}
       {snap?.phase === 'play' && role === 'watch' && <Watch s={snap} services={lobby?.services} />}
       {snap?.phase === 'end' && !CINE && <EndScreen s={snap} vlog={vlog} learning={learning} again={() => send({ t: 'start' })} />}
-      {role && !CINE && snap?.phase === 'play' && role !== 'hacker' && <button className={'dbgbtn' + (debug ? ' on' : '')} onClick={(e) => { setDebug(!debug); e.currentTarget.blur() }}>Debug: who did what</button>}
+      {!CINE && role !== 'hacker' && <KeyBar mode={!role ? 'menu' : snap?.phase === 'end' ? 'end' : !inMatch ? 'lobby' : role} debug={debug} toggle={() => setDebug((d) => !d)} />}
       {debug && role && !CINE && snap?.phase === 'play' && role !== 'hacker' && <DebugPanel log={vlog} local={conn.current?.local} />}
       {role && net === 'closed' && <div className="toast bad">Lost the server. Reconnecting…</div>}
     </div>
@@ -143,7 +143,7 @@ function Menu({ status, enter, name, setName, scenario }) {
         {status && <button onClick={() => enter('server', 'hacker')}>Join as hacker</button>}
         {status && <button onClick={() => enter('server', 'director')}>Join as spectator</button>}
       </div>
-      <p className="keys"><b>1. Power:</b> two cats stand on two rings at once. <b>2. Core:</b> grab it. <b>3. Escape:</b> reach the H. One cat is a traitor.<br /><b>WASD</b> move · <b>Shift</b> run · <b>C</b> sneak · <b>Space</b> claw · <b>F</b> shoot · <b>Q</b> talk</p>
+      <p className="keys"><b>1. Power:</b> two cats stand on two rings at once. <b>2. Core:</b> grab it. <b>3. Escape:</b> reach the H. One cat is a traitor.</p>
     </div>
   )
 }
@@ -167,6 +167,21 @@ function Lobby({ lobby, status, send, role, net }) {
       {qr && role !== 'hacker' && <div className="qr"><img src={qr} alt="QR code to join as hacker" /><p>Scan to join as the <b>hacker</b><br /><small>{link}</small></p></div>}
       <button className="big" onClick={() => send({ t: 'start' })}>Start the heist</button>
       {lobby?.services && <p className="svc">{Object.entries(lobby.services).map(([k, v]) => <span key={k} className={v ? 'on' : ''}>{k}</span>)}</p>}
+    </div>
+  )
+}
+
+const KEYS = {
+  runner: [['WASD', 'move'], ['Shift', 'run'], ['C', 'sneak'], ['Space', 'claw'], ['F', 'shoot'], ['E', 'yarn'], ['Q', 'talk'], ['V', 'vote'], ['X', 'alibi check']],
+  menu: [['WASD', 'move'], ['Shift', 'run'], ['C', 'sneak'], ['Space', 'claw'], ['F', 'shoot'], ['Q', 'talk']],
+}
+
+// Always on screen: the keys for this mode, and the debug switch.
+function KeyBar({ mode, debug, toggle }) {
+  return (
+    <div className="keybar">
+      <div>{(KEYS[mode] ?? []).map(([k, l]) => <span key={k}><kbd>{k}</kbd>{l}</span>)}{mode === 'watch' && <span>Agents are playing. Sit back and watch.</span>}</div>
+      <button className={debug ? 'on' : ''} onClick={(e) => { toggle(); e.currentTarget.blur() }}><kbd>`</kbd>Debug {debug ? 'on' : 'off'}</button>
     </div>
   )
 }
