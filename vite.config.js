@@ -7,6 +7,7 @@ export default defineConfig({
   base: './',
   server: {
     port: 5173,
+    proxy: { '/ws': { target: 'ws://localhost:8787', ws: true }, '/api': 'http://localhost:8787' },
     fs: {
       // Vite's defaults, plus local config that can hold credentials.
       deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '.mcp.json', '.lingcodedeploy.json', '**/.lingcode/**'],
