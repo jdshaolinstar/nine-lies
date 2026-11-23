@@ -2,6 +2,8 @@ import * as THREE from 'three'
 import { W, H, ROOMS, DOORS, PROPS, GENERATORS, HELIPAD, CORE, CAGES, solid, roomAt, doorAt } from '../shared/map.js'
 import { makeCat, makeDog, makeProp, label, mat, geo, add, PROP_COLOR } from './models.js'
 import { sfx } from './audio.js'
+import { guide } from './guide.js'
+import { findPath } from '../shared/nav.js'
 
 const WALL_H = 1.5
 
@@ -201,6 +203,19 @@ export class GameView {
     this.dot = new THREE.Mesh(new THREE.CircleGeometry(0.16, 20).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#ff2038' }))
     this.dot.position.set(21, 0.06, 12)
     s.add(this.dot)
+    // Follow-the-dots trail and a light pillar over the next goal.
+    this.trail = Array.from({ length: 26 }, () => {
+      const d = new THREE.Mesh(new THREE.CircleGeometry(0.16, 16).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#fff3b0', transparent: true, opacity: 0.9, depthWrite: false, toneMapped: false }))
+      d.position.y = 0.07
+      d.visible = false
+      s.add(d)
+      return d
+    })
+    this.pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 7, 24, 1, true), new THREE.MeshBasicMaterial({ color: '#fff3b0', transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }))
+    this.pillar.position.y = 3.5
+    this.pillar.visible = false
+    s.add(this.pillar)
+    this.bubbles = new Map()
     // Wire the cats drop in on.
     this.wire = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 12, 6), new THREE.MeshBasicMaterial({ color: '#dfe6ff' }))
     this.wire.visible = false
@@ -248,6 +263,55 @@ export class GameView {
       this.spawnFx(f)
     }
     if (this.seenFx.size > 400) this.seenFx.clear()
+  }
+
+  // Speech bubbles for cats on screen.
+  say(from, text) {
+    const e = this.ents.get(from)
+    if (!e || !e.obj.visible) return
+    const old = this.bubbles.get(from)
+    if (old) { old.parent?.remove(old); old.material.map.dispose() }
+    const b = label(text, '#ffffff', 40)
+    b.scale.multiplyScalar(0.85)
+    b.position.y = 2.75
+    b.userData.until = this.clock.elapsedTime + 3.2
+    e.obj.add(b)
+    this.bubbles.set(from, b)
+  }
+
+  updateTrail(t) {
+    const on = this.mode === 'runner' && this.snap?.phase === 'play'
+    const me = on ? this.snap.cats.find((c) => c.id === this.focus) : null
+    const g = me && me.state === 'ok' ? guide(this.snap) : null
+    this.pillar.visible = !!g?.target
+    if (!g?.target || g.there) {
+      this.trail.forEach((d) => { d.visible = false })
+      if (g?.target) this.pillar.position.set(g.target.x, 3.5, g.target.z)
+      return
+    }
+    this.pillar.position.set(g.target.x, 3.5, g.target.z)
+    this.pillar.material.opacity = 0.15 + Math.sin(t * 3) * 0.06
+    if (!this.pathAt || t - this.pathAt > 0.4) {
+      this.pathAt = t
+      this.guidePath = findPath(me, g.target, new Set(this.snap.locked)) ?? []
+    }
+    // Dots march along the path, so the direction reads at a glance.
+    const pts = [{ x: me.x, z: me.z }, ...this.guidePath]
+    const shift = (t * 1.6) % 1
+    let i = 0, walked = 0, next = 1 + shift
+    for (let k = 1; k < pts.length && i < this.trail.length; k++) {
+      const a = pts[k - 1], b = pts[k], len = Math.hypot(b.x - a.x, b.z - a.z) || 0.001
+      while (next <= walked + len && i < this.trail.length) {
+        const q = (next - walked) / len
+        const d = this.trail[i++]
+        d.visible = true
+        d.position.set(a.x + (b.x - a.x) * q, 0.07, a.z + (b.z - a.z) * q)
+        d.material.opacity = 0.95 * (1 - i / 30)
+        next += 1
+      }
+      walked += len
+    }
+    for (; i < this.trail.length; i++) this.trail[i].visible = false
   }
 
   reset() {
@@ -375,6 +439,8 @@ export class GameView {
       }
     }
     if (this.wireAt && t - this.wireAt > 0.15) this.wire.visible = false
+    this.updateTrail(t)
+    for (const [id, b] of this.bubbles) if (t > b.userData.until) { b.parent?.remove(b); b.material.map.dispose(); this.bubbles.delete(id) }
 
     for (const f of this.fx) {
       f.age += dt
@@ -467,7 +533,21 @@ export class GameView {
       this.renderer.render(this.scene, this.camera)
       return
     }
-    if (this.mode === 'runner' && me) {
+    if (this.mode === 'watch' && s) {
+      if (!this.shotUntil || t > this.shotUntil) {
+        const drama = (c) => (c.plan?.goal === 'hunt' ? 6 : 0) + (c.carry ? 5 : 0) + (c.wire > 0 ? 6 : 0) + (c.detected > 0.4 ? 3 : 0) + (c.plan?.goal === 'shoot' ? 6 : 0) + (c.mole ? 1.5 : 0) + Math.random() * 2 - (c.state !== 'ok' ? 20 : 0)
+        this.star = [...s.cats].sort((a, b) => drama(b) - drama(a))[0]?.id
+        this.shotUntil = t + 6
+      }
+      const hot = s.recent?.filter((e) => ['kill', 'gunshot', 'scuffle', 'core_taken', 'body_found', 'turned'].includes(e.type)).pop()
+      const st = this.ents.get((hot && s.t - hot.t < 3 && this.ents.has(hot.actor) ? hot.actor : null) ?? this.star)
+      const p = st?.obj.position ?? new THREE.Vector3(21, 0, 16)
+      this.look.lerp(new THREE.Vector3(p.x, 0, p.z), Math.min(1, dt * 2.2))
+      this.camera.position.lerp(new THREE.Vector3(p.x, 17, p.z + 11.5), Math.min(1, dt * 2.2))
+      this.lamp.position.set(p.x, 2.6, p.z)
+      this.lamp.intensity = 10
+      this.ents.forEach((e) => { if (e.kind === 'cat') e.obj.userData.ring.visible = e === st })
+    } else if (this.mode === 'runner' && me) {
       const p = me.obj.position
       this.look.lerp(new THREE.Vector3(p.x, 0, p.z - 0.5), Math.min(1, dt * 6))
       this.camera.position.lerp(new THREE.Vector3(p.x, portrait ? 20 : 14.5, p.z + (portrait ? 11 : 8.5)), Math.min(1, dt * 5))

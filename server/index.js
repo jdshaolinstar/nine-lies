@@ -20,6 +20,7 @@ const sessions = new Map()
 function sessionFor(room) {
   const key = /^[a-z0-9-]{1,20}$/.test(room ?? '') ? room : 'main'
   if (!sessions.has(key)) {
+    for (const [k, s] of sessions) if (k !== 'main' && s.clients.size === 0) sessions.delete(k)
     if (sessions.size > 20) return sessions.get('main') ?? [...sessions.values()][0]
     sessions.set(key, new Session({ ...services.hooks, services: services.status(), learning: services.learning, scenario: services.scenario }))
   }
@@ -59,6 +60,7 @@ setInterval(() => {
   const dt = Math.min(0.25, (now - last) / 1000)
   last = now
   for (const s of sessions.values()) {
+    if (!s.clients.size) continue // nobody here: pause, and spend nothing
     try { s.tick(dt) } catch (e) { console.error('tick failed', e) }
   }
 }, 50)

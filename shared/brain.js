@@ -91,7 +91,7 @@ function loyalDecide(m, c) {
 function moleDecide(m, c) {
   const t = m.tactic
   const ready = m.t > (t === 'early_strike' ? 28 : t === 'late_strike' ? 95 : t === 'frame' ? 45 : 1e9)
-  const prey = believedAlive(m, c).filter((o) => o.state === 'ok' && c.lastSeen[o.id] && m.t - c.lastSeen[o.id].t < 14)
+  const prey = believedAlive(m, c).filter((o) => o.state === 'ok' && c.lastSeen[o.id] && m.t - c.lastSeen[o.id].t < 14 && !(m.humans.has(o.id) && m.t < 60))
 
   if (m.core.by && m.core.by !== c.id) {
     const carrier = m.cat(m.core.by)

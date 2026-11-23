@@ -6,6 +6,7 @@ import { sfx, speak, unlock, audio } from './audio.js'
 import Hud from './Hud.jsx'
 import Hacker from './Hacker.jsx'
 import Director from './Director.jsx'
+import Watch from './Watch.jsx'
 import EndScreen from './EndScreen.jsx'
 import { DEFAULT_SCENARIO } from '../shared/scenario.js'
 
@@ -48,12 +49,13 @@ export default function App() {
     else if (m.t === 'snap') {
       const s = m.s
       const r = roleRef.current
-      view.current?.update(s, r === 'runner' && s.phase === 'play' ? 'runner' : CINE ? 'cine' : 'director', s.you)
+      view.current?.update(s, r === 'runner' && s.phase === 'play' ? 'runner' : CINE ? 'cine' : r === 'watch' && s.phase === 'play' ? 'watch' : 'director', s.you)
       const last = s.radio[s.radio.length - 1]
       if (last && last.id > heard.current) {
         if (heard.current >= 0 || last.id < 3) {
           sfx('radio')
-          if (last.from !== s.you) speak(last.from, last.text, !conn.current?.local && statusRef.current?.services?.voices, apiBase())
+          view.current?.say(last.from, last.text)
+          if (last.from !== s.you && ['suspect', 'body', 'help', 'taunt', 'at', 'saw'].includes(last.kind)) speak(last.from, last.text, !conn.current?.local && statusRef.current?.services?.voices, apiBase())
         }
         heard.current = last.id
       }
@@ -72,9 +74,9 @@ export default function App() {
     roleRef.current = r
     setRole(r)
     view.current?.reset()
-    conn.current = mode === 'solo' ? connectLocal(onMsg) : connectServer(onMsg, (st) => { setNet(st); if (st === 'open') conn.current?.send({ t: 'join', role: r, name }) })
+    conn.current = mode === 'solo' ? connectLocal(onMsg) : connectServer(onMsg, (st) => { setNet(st); if (st === 'open') { conn.current?.send({ t: 'join', role: r === 'watch' ? 'director' : r, name }); if (r === 'watch') conn.current?.send({ t: 'start' }) } }, r === 'watch')
     if (mode === 'solo') {
-      conn.current.send({ t: 'join', role: r, name })
+      conn.current.send({ t: 'join', role: r === 'watch' ? 'director' : r, name })
       conn.current.send({ t: 'start' })
     }
   }
@@ -98,6 +100,7 @@ export default function App() {
       {snap?.phase === 'play' && role === 'runner' && <Hud s={snap} send={send} scan={scan} scenario={lobby?.scenario ?? DEFAULT_SCENARIO} />}
       {showHacker && <Hacker s={snap} send={send} scan={scan} />}
       {snap?.phase === 'play' && role === 'director' && !CINE && <Director s={snap} scan={scan} services={lobby?.services} />}
+      {snap?.phase === 'play' && role === 'watch' && <Watch s={snap} services={lobby?.services} />}
       {snap?.phase === 'end' && !CINE && <EndScreen s={snap} learning={learning} again={() => send({ t: 'start' })} />}
       {role && net === 'closed' && <div className="toast bad">Lost the server. Reconnecting…</div>}
     </div>
@@ -110,19 +113,19 @@ function Menu({ status, enter, name, setName, scenario }) {
       <p className="kicker">A heist for cats who can&apos;t trust cats</p>
       <h1>Nine<span>Lies</span></h1>
       <p className="brief"><b>{scenario.villain}:</b> “{scenario.villainLine}”</p>
-      <p className="brief dim">{scenario.briefing}</p>
-      {scenario.why && <p className="why"><b>Why this mission:</b> {scenario.why}<br />{scenario.sources?.slice(0, 3).map((u) => <a key={u.url} href={u.url} target="_blank" rel="noreferrer">{u.title.slice(0, 40)}</a>)}</p>}
+      {scenario.why && <p className="why"><b>Why this mission:</b> {scenario.why}<br />{scenario.sources?.slice(0, 2).map((u) => <a key={u.url} href={u.url} target="_blank" rel="noreferrer">{u.title.length > 38 ? u.title.slice(0, 38) + '…' : u.title}</a>)}</p>}
       <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Code name (optional)" maxLength={14} aria-label="Code name" />
       <div className="row">
-        <button className="big" onClick={() => enter('solo', 'runner')}>Play now</button>
-        {status && <button className="big alt" onClick={() => enter('server', 'runner')}>Play with friends</button>}
+        <button className="big" onClick={() => enter(status ? 'server' : 'solo', 'watch')}>Watch a heist</button>
+        <button className="big alt" onClick={() => enter('solo', 'runner')}>Play</button>
+        {status && <button className="big alt" onClick={() => enter('server', 'runner')}>Play with live AI + friends</button>}
       </div>
       <div className="row small">
-        <button onClick={() => enter('solo', 'director')}>Watch the agents</button>
+        
         {status && <button onClick={() => enter('server', 'hacker')}>Join as hacker</button>}
         {status && <button onClick={() => enter('server', 'director')}>Join as spectator</button>}
       </div>
-      <p className="keys"><b>WASD</b> move · <b>Shift</b> sprint · <b>Ctrl</b> sneak · <b>Space</b> claw · <b>F</b> shoot · <b>E</b> yarn · <b>Q</b> radio · <b>V</b> vote · <b>X</b> alibi scan</p>
+      <p className="keys"><b>1. Power:</b> two cats stand on two rings at once. <b>2. Core:</b> grab it. <b>3. Escape:</b> reach the H. One cat is a traitor.<br /><b>WASD</b> move · <b>Shift</b> run · <b>C</b> sneak · <b>Space</b> claw · <b>F</b> shoot · <b>Q</b> talk</p>
     </div>
   )
 }

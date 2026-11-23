@@ -17,20 +17,21 @@ export function connectLocal(onMsg) {
   return { local: true, session, send: (m) => session.handle(client, m), close: () => clearInterval(timer) }
 }
 
-export function serverUrl() {
+const own = 'w' + Math.random().toString(36).slice(2, 8)
+export function serverUrl(solo) {
   const p = new URLSearchParams(location.search)
   const explicit = p.get('server') || import.meta.env.VITE_SERVER_URL
   const base = explicit ? new URL(explicit) : location
   const proto = base.protocol === 'https:' ? 'wss:' : 'ws:'
-  return `${proto}//${base.host}/ws?room=${encodeURIComponent(p.get('room') || 'main')}`
+  return `${proto}//${base.host}/ws?room=${encodeURIComponent(solo ? own : p.get('room') || 'main')}`
 }
 
-export function connectServer(onMsg, onState) {
+export function connectServer(onMsg, onState, solo) {
   let ws
   let closed = false
   let tries = 0
   const open = () => {
-    ws = new WebSocket(serverUrl())
+    ws = new WebSocket(serverUrl(solo))
     ws.onopen = () => { tries = 0; onState('open') }
     ws.onmessage = (e) => onMsg(JSON.parse(e.data))
     ws.onclose = () => {

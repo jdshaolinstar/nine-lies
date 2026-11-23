@@ -54,7 +54,8 @@ for (const q of QUERIES) {
   } catch (e) { console.error(q, '->', e.message) }
 }
 // One vote per page, weighted by search rank, so a long page can't win alone.
-const pages = [...new Map(evidence.map((e) => [e.url, e])).values()]
+// Only pages whose title is about films: news about real spies says nothing about taste in movies.
+const pages = [...new Map(evidence.map((e) => [e.url, e])).values()].filter((p) => /\b(movies?|films?|scenes?|heists?|cinema|thrillers?)\b/i.test(p.title))
 const board = Object.entries(TROPES).map(([id, re]) => {
   const hits = pages.filter((p) => p.text.match(re))
   return { id, pages: hits.length, score: +hits.reduce((s, p) => s + 1 / Math.sqrt(p.rank || 1), 0).toFixed(2), sources: hits.slice(0, 5).map((p) => ({ title: p.title, url: p.url })) }
@@ -76,7 +77,7 @@ const pick = (k) => (typeof skin[k] === 'string' && skin[k].length < 260 ? skin[
 const scenario = {
   ...DEFAULT_SCENARIO, id: `viral-${top.id}`, title: pick('title'), villain: pick('villain'), villainLine: pick('villainLine'), target: pick('target'), briefing: pick('briefing'),
   setPiece: top.id,
-  why: `${SET_PIECES[top.id].split(':')[0]} came up on ${top.pages} of ${pages.length} pages Telem found about the spy scenes people love.`,
+  why: `Telem read ${pages.length} pages about the spy and heist scenes people love. ${SET_PIECES[top.id].split(':')[0]} led with ${top.pages}.`,
   sources: top.sources, board: board.map(({ id, pages: n, score }) => ({ id, pages: n, score })), researchedAt: new Date().toISOString(),
 }
 fs.mkdirSync('data', { recursive: true })

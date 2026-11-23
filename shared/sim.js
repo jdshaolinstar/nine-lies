@@ -83,7 +83,7 @@ export class Match {
     this.mole = this.cat(this.moleId)
     this.mole.isMole = true
 
-    this.dogs = PATROLS.map((route, i) => ({
+    this.dogs = (this.humans.size ? PATROLS.slice(0, 3) : PATROLS).map((route, i) => ({
       id: 'dog' + i, kind: 'dog', ...roomCenter(route[0]), dir: this.rng() * 6.28, state: 'patrol', route, leg: 0,
       path: null, pathAt: 0, wait: 1 + this.rng() * 2, target: null, chase: null, lost: 0, ko: 0, meter: {}, speed: 0,
     }))
@@ -271,7 +271,16 @@ export class Match {
     if (!f || f.state !== 'ok' || this.phase !== 'play') return null
     if (f.mutedUntil > this.t) return null
     f.mutedUntil = this.t + 0.7
+    if (!this.humans.has(from)) {
+      const key = kind + room + (cat ?? '')
+      f.saidAt ??= {}
+      if (this.t - (f.saidAt[key] ?? -99) < 20 || (kind === 'guard' && this.t - (this.lastGuardCall ?? -99) < 8)) return null
+      f.saidAt[key] = this.t
+      if (kind === 'guard') this.lastGuardCall = this.t
+    }
     if (!ROOM[room]) room = roomOf(f)
+    // Loyal agents report truthfully; a model naming the wrong room is not a lie.
+    if (['at', 'help', 'regroup'].includes(kind) && !f.isMole && !this.humans.has(from)) room = roomOf(f)
     if (cat && !this.cat(cat)) cat = null
     if (['saw', 'suspect', 'body'].includes(kind) && !cat) return null
     const msg = { id: this.radio.length, t: +this.t.toFixed(1), from, to, kind, room, cat: cat ?? null, source }
@@ -279,7 +288,7 @@ export class Match {
     const truth = roomOf(f)
     msg.lie = ['going', 'at'].includes(kind) ? (kind === 'at' && room !== truth) || !!f.isLying : false
     this.radio.push(msg)
-    this.log('radio', from, to === 'all' ? null : to, { kind, room, cat: msg.cat, text: msg.text, trueRoom: truth })
+    this.log('radio', from, to === 'all' ? null : to, { kind, room, cat: msg.cat, text: msg.text, trueRoom: truth, lie: msg.lie })
     this.onRadio?.(msg)
     const hear = (o, via) => {
       if (this.phase !== 'play' || o.state !== 'ok') return
@@ -572,7 +581,7 @@ export class Match {
     }
     if (i.leak && c.isMole && ROOM[i.leak] && this.t - (c.leakAt ?? -99) > 18 && !(this.lastLeak?.room === i.leak && this.t - this.lastLeak.t < 50)) { c.leakAt = this.t; this.lastLeak = { room: i.leak, t: this.t }; this.leak(i.leak, i.leakWhy ?? `crew heading to ${roomName(i.leak)}`) }
     if (i.say?.kind) {
-      c.isLying = !!i.lie
+      c.isLying = !!i.lie && (c.isMole || c.turned)
       this.say(c.id, i.say, source)
       c.isLying = false
     }
@@ -699,7 +708,7 @@ export class Match {
       // The mole is on the payroll: dogs let it pass.
       const sees = !c.isMole && !(d.fed > this.t) && dd < (c.mode === 'sneak' ? range * 0.72 : range) &&
         (Math.abs(angleDiff(angleTo(d, c), d.dir)) < 0.62 || dd < 0.9) && lineOfSight(d, c, this.locked)
-      d.meter[c.id] = clamp((d.meter[c.id] ?? 0) + (sees ? dt * (0.7 + 1.5 * (1 - dd / range)) : -dt * 0.7), 0, 1.2)
+      d.meter[c.id] = clamp((d.meter[c.id] ?? 0) + (sees ? dt * (0.7 + 1.5 * (1 - dd / range)) * (this.humans.has(c.id) ? 0.65 : 1) : -dt * 0.7), 0, 1.2)
       c.detected = Math.max(sees ? d.meter[c.id] : 0, (c.detected ?? 0) - dt * 0.5)
       if (sees && d.meter[c.id] >= 1 && (!best || dd < dist(d, best))) best = c
     }
@@ -873,6 +882,18 @@ export class Match {
     this.log('end', null, null, this.result)
   }
 
+  // Newest story events, numbered, for the commentary.
+  recentEvents() {
+    const out = []
+    for (let i = this.events.length - 1; i >= 0 && out.length < 24; i--) {
+      const e = this.events[i]
+      if (this.t - e.t > 7) break
+      if (['saw', 'hack', 'camera', 'laser', 'yarn', 'dog_ko'].includes(e.type)) continue
+      out.push({ n: i + 1, type: e.type, t: e.t, actor: e.actor, target: e.target, data: e.data })
+    }
+    return out.reverse()
+  }
+
   // --- what each screen is allowed to know --------------------------------------------
 
   viewFor(role, catId) {
@@ -906,7 +927,7 @@ export class Match {
       })),
       dogs: this.dogs.filter(showDog).map((d) => ({ id: d.id, x: f(d.x), z: f(d.z), dir: f(d.dir), state: d.state, speed: f(d.speed) })),
       fx: this.fx.filter((e) => god || !me || ghost || e.kind === 'shot' || e.kind === 'alarm' || this.canSee(me, e)).map((e) => ({ ...e })),
-      radio: heard, scansLeft: this.scansLeft, pings: this.pings.map((p) => p.dog),
+      radio: god ? heard : heard.map(({ id, t, from, to, kind, room, cat, text, via }) => ({ id, t, from, to, kind, room, cat, text, via })), scansLeft: this.scansLeft, pings: this.pings.map((p) => p.dog),
       heardShot: me?.heardShot && this.t - me.heardShot.t < 4 ? me.heardShot.dir : null,
       vote: this.vote ? { by: this.vote.by, left: f(this.vote.until - this.t), votes: god ? this.vote.votes : Object.fromEntries(Object.keys(this.vote.votes).map((k) => [k, true])), options: this.cats.filter((c) => c.state !== 'cut').map((c) => c.id) } : null,
       lastVote: this.lastVote && this.t - this.lastVote.t < 6 ? { out: this.lastVote.out, wasMole: this.lastVote.wasMole, votes: this.lastVote.votes } : null,
@@ -914,6 +935,7 @@ export class Match {
       sealed: god ? 0 : this.ledger.length,
       result: this.result,
       ...(god ? { mole: this.moleId, tactic: this.tactic } : {}),
+      ...(god && this.phase === 'play' ? { recent: this.recentEvents() } : {}),
       ...(this.phase === 'end' ? { story: this.events.filter((e) => ['kill', 'captured', 'rescued', 'leak', 'gunshot', 'vote_result', 'vault_open', 'core_taken', 'scuffle', 'end', 'body_found', 'turned', 'pilot_leaving', 'power_cut'].includes(e.type)) } : {}),
     }
   }
