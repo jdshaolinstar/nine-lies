@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import QRCode from 'qrcode'
-import { connectLocal, connectServer, probeServer } from './net.js'
+import { connectLocal, connectServer, probeServer, apiBase } from './net.js'
 import { GameView } from './view.js'
 import { sfx, speak, unlock, audio } from './audio.js'
 import Hud from './Hud.jsx'
@@ -53,7 +53,7 @@ export default function App() {
       if (last && last.id > heard.current) {
         if (heard.current >= 0 || last.id < 3) {
           sfx('radio')
-          if (last.from !== s.you) speak(last.from, last.text, statusRef.current?.services?.voices)
+          if (last.from !== s.you) speak(last.from, last.text, !conn.current?.local && statusRef.current?.services?.voices, apiBase())
         }
         heard.current = last.id
       }

@@ -29,6 +29,8 @@ function sessionFor(room) {
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x')
   if (url.pathname === '/health') return res.end('ok')
+  // The browser build can be hosted elsewhere and still use this server.
+  if (url.pathname.startsWith('/api/')) res.setHeader('access-control-allow-origin', '*')
   if (url.pathname === '/api/status') {
     res.setHeader('content-type', 'application/json')
     return res.end(JSON.stringify({ services: services.status(), scenario: services.scenario, detail: url.searchParams.has('debug') && !req.headers['x-forwarded-for'] ? services.detail() : undefined, lan: lanAddress(), port: PORT, publicUrl: process.env.PUBLIC_URL ?? null }))
@@ -62,7 +64,8 @@ setInterval(() => {
 }, 50)
 
 function lanAddress() {
-  for (const list of Object.values(os.networkInterfaces())) {
+  for (const [name, list] of Object.entries(os.networkInterfaces())) {
+    if (/vmware|virtual|vethernet|wsl|docker|loopback/i.test(name)) continue
     for (const i of list) if (i.family === 'IPv4' && !i.internal && !i.address.startsWith('172.') && !i.address.startsWith('169.')) return i.address
   }
   return 'localhost'

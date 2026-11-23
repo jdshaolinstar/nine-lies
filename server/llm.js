@@ -111,7 +111,7 @@ export function captainFor(scenario) {
     try {
       const text = await chat([
         { role: 'system', content: `You are ${scenario.villain}, the dog captain guarding ${scenario.target}. Smug and theatrical. Reply with ONE JSON object: {"orders":[{"dog":"dog0","room":"kitchen"}], "reason":"max 12 words", "taunt":"max 10 words over the loudspeaker, or empty"}. At most 2 orders. Room ids: ${ROOM_IDS}.` },
-        { role: 'user', content: `Time until it fires: ${Math.round(m.timeLeft)}s. Vault ${m.vaultOpen ? 'BREACHED' : 'sealed'}. Core ${m.core.taken ? 'STOLEN, they need the helipad' : 'safe'}. Dogs: ${m.dogs.map((d) => `${d.id} ${d.state} in ${roomOf(d)}`).join('; ')}. Intel: ${recent.map((i) => `[${Math.round(m.t - i.t)}s ago] ${i.text}`).join(' | ') || 'none'}` },
+        { role: 'user', content: `Time until it fires: ${Math.round(m.timeLeft)}s. Vault ${m.vaultOpen ? 'BREACHED' : 'sealed'}. Core ${m.core.taken ? 'STOLEN, they need the helipad' : 'safe'}. ${m.captain.habits ? `Past heists: ${m.captain.habits}. ` : ''}Dogs: ${m.dogs.map((d) => `${d.id} ${d.state} in ${roomOf(d)}`).join('; ')}. Intel: ${recent.map((i) => `[${Math.round(m.t - i.t)}s ago] ${i.text}`).join(' | ') || 'none'}` },
       ], { maxTokens: 160 })
       return parseJson(text)
     } catch (e) {

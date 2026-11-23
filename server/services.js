@@ -7,7 +7,7 @@ import { TACTICS } from '../shared/brain.js'
 import { DEFAULT_SCENARIO } from '../shared/scenario.js'
 import { thinkerFor, captainFor, chat, llmStats } from './llm.js'
 import { connectBand, bandStats } from './band.js'
-import { connectWarehouse, alibiScanner, learnedTactics, bruinQuery, whStats } from './warehouse.js'
+import { connectWarehouse, alibiScanner, learnedTactics, captainBriefing, bruinQuery, whStats } from './warehouse.js'
 import { createTts, ttsReady, allowLine, ttsStats } from './tts.js'
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -49,6 +49,7 @@ export async function createServices() {
     onMatch(m) {
       if (band) m.transport = band
       if (state.llm) m.captainThinker = captainFor(scenario)
+      if (state.bruin) captainBriefing().then((b) => m.briefCaptain(b)).catch((e) => { whStats.lastError = e.message })
     },
     async onEnd(m, table) {
       fs.writeFileSync(path.join(DATA, 'learning.json'), JSON.stringify(table, null, 2))

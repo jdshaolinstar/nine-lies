@@ -12,7 +12,7 @@ columns:
   - name: source
     checks:
       - name: accepted_values
-        value: [llm, rule]
+        value: [llm, rule, bruin]
 @bruin */
 select match_id, t, data->>'who' as who, data->>'source' as source, data->>'goal' as goal, data->>'reason' as reason
 from events

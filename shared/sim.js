@@ -312,6 +312,20 @@ export class Match {
       .slice(0, 1).forEach((d) => this.sendDog(d, roomCenter(room), 'leak'))
   }
 
+  // Cross-match habits from the warehouse. The nearest free dog acts on them.
+  briefCaptain({ first, caught }) {
+    if (this.phase !== 'play') return
+    const bits = []
+    if (first) bits.push(`${first.share}% of crews go to ${roomName(first.room)} first`)
+    if (caught) bits.push(`${roomName(caught.room)} is where most cats get caught (${caught.share}%)`)
+    if (!bits.length) return
+    this.captain.habits = bits.join('; ')
+    const room = first && ROOM[first.room] ? first.room : caught?.room
+    this.decideLog('captain', 'bruin', `Guard ${roomName(room)} early`, bits.join('; '), true)
+    const d = this.dogs.filter((k) => k.state === 'patrol').sort((a, b) => dist(a, roomCenter(room)) - dist(b, roomCenter(room)))[0]
+    if (d) this.sendDog(d, roomCenter(room), 'briefing')
+  }
+
   captainOrders({ orders = [], reason = '', taunt = '' }) {
     if (this.phase !== 'play') return
     for (const o of orders.slice(0, 2)) {

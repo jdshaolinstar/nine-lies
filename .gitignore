@@ -10,3 +10,8 @@ dist
 data/
 .bruin.yml
 bruin/logs/
+
+logs/runs
+logs/*.log
+__pycache__/
+*.py[cod]

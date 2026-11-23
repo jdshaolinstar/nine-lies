@@ -98,6 +98,13 @@ export function alibiScanner(wh) {
   }
 }
 
+// The captain studies past crews through Bruin before the match.
+export async function captainBriefing() {
+  const r = await bruinQuery('select habit, room, n, share from captain_briefing where n > 1 order by habit, n desc')
+  const top = (h) => r.rows.find((x) => x.habit === h)
+  return { first: top('first_generator'), caught: top('caught_in'), killed: top('killed_in'), sql: r.sql, ms: r.ms }
+}
+
 // What the mole has got away with, from every match on record.
 export async function learnedTactics() {
   const r = await bruinQuery('select tactic, plays, wins from mole_learning')

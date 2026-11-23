@@ -43,6 +43,8 @@ export function connectServer(onMsg, onState) {
   return { send: (m) => { if (ws.readyState === 1) ws.send(JSON.stringify(m)) }, close: () => { closed = true; ws.close() } }
 }
 
+export const apiBase = () => (new URLSearchParams(location.search).get('server') || import.meta.env.VITE_SERVER_URL || '').replace(/\/$/, '')
+
 // Is there a game server behind this page?
 export async function probeServer() {
   try {

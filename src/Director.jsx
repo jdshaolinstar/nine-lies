@@ -38,7 +38,7 @@ export function Ledger({ s, full }) {
     <div className={'ledger' + (full ? ' full' : '')}>
       <h3>Decision ledger</h3>
       {s.ledger.slice(full ? -80 : -9).map((l, i) => (
-        <p key={i} className={l.secret ? 'secret' : ''}><time>{clock(l.t)}</time><b style={{ color: color(l.who) }}>{name(l.who)}</b> {l.goal} <i>{l.reason}</i>{l.source === 'llm' && <em>LLM</em>}</p>
+        <p key={i} className={l.secret ? 'secret' : ''}><time>{clock(l.t)}</time><b style={{ color: color(l.who) }}>{name(l.who)}</b> {l.goal} <i>{l.reason}</i>{l.source !== 'rule' && <em>{l.source === 'bruin' ? 'BRUIN' : 'LLM'}</em>}</p>
       ))}
     </div>
   )
