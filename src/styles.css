@@ -1,0 +1,25 @@
+html, body, #root { height: 100%; margin: 0; }
+body { background: #14171f; color: #f2f4f8; font-family: system-ui, sans-serif; overflow: hidden; }
+canvas { touch-action: none; }
+
+.hud {
+  position: fixed; top: 16px; left: 0; right: 0;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 20px;
+  padding: 0 16px; pointer-events: none; font-variant-numeric: tabular-nums;
+}
+.hud span { display: flex; align-items: center; gap: 8px; }
+.hud i { width: 12px; height: 12px; border-radius: 3px; }
+.time { min-width: 3ch; }
+
+.panel {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  box-sizing: border-box; width: min(420px, calc(100% - 32px)); padding: 28px;
+  border-radius: 12px; background: #14171ff0; text-align: center; line-height: 1.5;
+}
+.panel h1 { margin: 0 0 8px; }
+.panel button {
+  margin-top: 8px; padding: 12px 32px; border: 0; border-radius: 8px;
+  background: #ffc857; color: #14171f; font: inherit; font-weight: 600; cursor: pointer;
+}
+.panel button:hover { background: #ffd67f; }
+.panel button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
