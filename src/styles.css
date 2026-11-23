@@ -149,3 +149,14 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--gold); outl
 .feed { position: fixed; right: 14px; top: 14px; width: 270px; font-size: 13px; opacity: 0.8; } .feed p { margin: 4px 0; background: #0a0d1ab0; border-radius: 8px; padding: 5px 9px; } .feed time { opacity: 0.5; margin-right: 6px; }
 .radio { bottom: 20px; }
 @media (max-width: 1000px) { .steps small, .mini, .feed { display: none; } }
+
+.dbgbtn { position: fixed; left: 50%; transform: translateX(-50%); top: 104px; background: #0a0d1ad0; border: 1px solid var(--line); border-radius: 99px; padding: 4px 14px; font-size: 12px; opacity: 0.75; }
+.dbgbtn.on { border-color: var(--mint); color: var(--mint); opacity: 1; }
+.debug { position: fixed; right: 14px; top: 70px; width: 350px; max-height: 66vh; overflow: hidden; background: #05070ff0; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 12.5px; }
+.debug h3 { margin: 0 0 8px; font-size: 14px; } .debug h3 small { opacity: 0.5; font-weight: 400; margin-left: 6px; }
+.dchips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+.dchips button { border: 1px solid var(--v); color: var(--v); background: transparent; border-radius: 99px; padding: 2px 9px; font-size: 11px; font-weight: 700; } .dchips .sel { background: var(--v); color: #000; }
+.debug p { margin: 0 0 5px; padding: 5px 8px; border-left: 4px solid var(--v, #555); background: #ffffff0a; border-radius: 0 7px 7px 0; line-height: 1.35; }
+.debug p b { color: var(--v); } .debug time { opacity: 0.45; margin-right: 6px; } .debug em { float: right; font-style: normal; opacity: 0.6; margin-left: 8px; } .debug .bad em { color: #ff8090; opacity: 1; }
+.dbg .feed, .dbg .ledger:not(.full) { display: none; } .dbg .suspect, .dbg .scan { right: 378px; } .dbg .caption { max-width: 46vw; }
+.vt { display: grid; gap: 6px; } .vt > div { border-left: 4px solid var(--v); padding: 4px 10px; background: #ffffff0a; border-radius: 0 8px 8px 0; font-size: 13px; } .vt b { color: var(--v); margin-right: 8px; } .vt small { display: block; opacity: 0.65; } .vt .off { opacity: 0.4; }

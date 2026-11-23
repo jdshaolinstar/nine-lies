@@ -8,6 +8,7 @@ import Hacker from './Hacker.jsx'
 import Director from './Director.jsx'
 import Watch from './Watch.jsx'
 import EndScreen from './EndScreen.jsx'
+import DebugPanel, { VENDORS } from './Debug.jsx'
 import { DEFAULT_SCENARIO } from '../shared/scenario.js'
 
 const params = new URLSearchParams(location.search)
@@ -28,6 +29,15 @@ export default function App() {
   const [net, setNet] = useState('open')
   const [name, setName] = useState('')
   const roleRef = useRef(null)
+  const [vlog, setVlog] = useState([])
+  const [debug, setDebug] = useState(params.has('debug'))
+  const debugRef = useRef(debug)
+  debugRef.current = debug
+  useEffect(() => {
+    const key = (e) => { if (e.code === 'Backquote') setDebug((d) => !d) }
+    addEventListener('keydown', key)
+    return () => removeEventListener('keydown', key)
+  }, [])
   const heard = useRef(-1)
   const cineAgain = useRef(false)
 
@@ -44,7 +54,11 @@ export default function App() {
 
   const onMsg = (m) => {
     if (m.t === 'lobby') setLobby(m)
-    else if (m.t === 'started') { view.current?.reset(); heard.current = -1; setScan(null); setSnap(null) }
+    else if (m.t === 'started') { view.current?.reset(); heard.current = -1; setScan(null); setSnap(null); setVlog([]) }
+    else if (m.t === 'vendor') {
+      setVlog((l) => [...l.slice(-400), m.e])
+      if (debugRef.current && m.e.sticker) view.current?.sticker(m.e.who ?? snapRef.current?.you, `${VENDORS[m.e.vendor].name.toUpperCase()} ${m.e.sticker}`, VENDORS[m.e.vendor].color)
+    } else if (m.t === 'vendorAll') setVlog(m.log)
     else if (m.t === 'scan') setScan(m)
     else if (m.t === 'snap') {
       const s = m.s
@@ -65,6 +79,8 @@ export default function App() {
     }
   }
   const statusRef = useRef(null)
+  const snapRef = useRef(null)
+  snapRef.current = snap
   statusRef.current = status
 
   const enter = (mode, r) => {
@@ -93,7 +109,7 @@ export default function App() {
   const inMatch = snap && (snap.phase === 'play' || snap.phase === 'end')
   const showHacker = role === 'hacker' && snap?.phase === 'play'
   return (
-    <div className="app">
+    <div className={'app' + (debug && role ? ' dbg' : '')}>
       <div className={'stage' + (showHacker ? ' hidden' : '')}><canvas ref={canvas} /></div>
       {!role && <Menu status={status} enter={enter} name={name} setName={setName} scenario={status?.scenario ?? DEFAULT_SCENARIO} />}
       {role && !inMatch && <Lobby lobby={lobby} status={status} send={send} role={role} net={net} />}
@@ -101,7 +117,9 @@ export default function App() {
       {showHacker && <Hacker s={snap} send={send} scan={scan} />}
       {snap?.phase === 'play' && role === 'director' && !CINE && <Director s={snap} scan={scan} services={lobby?.services} />}
       {snap?.phase === 'play' && role === 'watch' && <Watch s={snap} services={lobby?.services} />}
-      {snap?.phase === 'end' && !CINE && <EndScreen s={snap} learning={learning} again={() => send({ t: 'start' })} />}
+      {snap?.phase === 'end' && !CINE && <EndScreen s={snap} vlog={vlog} learning={learning} again={() => send({ t: 'start' })} />}
+      {role && !CINE && snap?.phase === 'play' && role !== 'hacker' && <button className={'dbgbtn' + (debug ? ' on' : '')} onClick={(e) => { setDebug(!debug); e.currentTarget.blur() }}>Debug: who did what</button>}
+      {debug && role && !CINE && snap?.phase === 'play' && role !== 'hacker' && <DebugPanel log={vlog} local={conn.current?.local} />}
       {role && net === 'closed' && <div className="toast bad">Lost the server. Reconnecting…</div>}
     </div>
   )

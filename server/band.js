@@ -67,14 +67,18 @@ export async function connectBand(dataDir) {
   need.forEach(listen)
 
   let n = 0
-  const post = (from, room, text, toNames, onArrive) => {
+  const post = (from, room, text, toNames, onArrive, report) => {
     const token = `${Date.now().toString(36)}${(n++).toString(36)}`
     const t0 = Date.now()
     const pending = new Set(toNames)
+    let viaBand = 0
+    let lastMs = 0
     const arrive = (name, via) => {
       if (!pending.delete(name)) return
       if (via === 'band') { bandStats.delivered++; bandStats.ms = bandStats.ms ? bandStats.ms * 0.8 + (Date.now() - t0) * 0.2 : Date.now() - t0 } else bandStats.local++
+      if (via === 'band') { viaBand++; lastMs = Date.now() - t0 }
       onArrive(name, via)
+      if (!pending.size) report?.({ ok: viaBand === toNames.length, ms: viaBand ? lastMs : null, viaBand, total: toNames.length })
     }
     for (const name of toNames) waiting.set(`${token}:${name}`, () => arrive(name, 'band'))
     bandStats.sent++
@@ -87,8 +91,21 @@ export async function connectBand(dataDir) {
   return {
     send(match, msg, toIds, deliver) {
       if (!agents[msg.from]) return toIds.forEach((id) => deliver(id))
-      post(msg.from, crewRoom, msg.text, toIds, deliver)
+      const cap = (id) => id[0].toUpperCase() + id.slice(1)
+      const whisper = msg.to !== 'all'
+      post(msg.from, crewRoom, msg.text, toIds, deliver, (r) => match.vendor?.({
+        vendor: 'band', who: msg.from, sticker: whisper ? 'whisper' : 'radio', ms: r.ms, ok: r.ok, secret: whisper,
+        what: `${cap(msg.from)} → ${whisper ? `only ${toIds.map(cap).join(', ')}` : `${r.total} crew agents`}: "${msg.text}"`,
+        hidden: 'A private whisper was delivered',
+      }))
     },
-    leak(match, room, why, done) { post(match.moleId, lineRoom, `Tip: ${why}`, ['captain'], done) },
+    leak(match, room, why, done) {
+      const id = match.moleId
+      post(id, lineRoom, `Tip: ${why}`, ['captain'], done, (r) => match.vendor?.({
+        vendor: 'band', who: id, sticker: 'secret tip', ms: r.ms, ok: r.ok, secret: true,
+        what: `${id[0].toUpperCase() + id.slice(1)} (the traitor) → only the dog captain: "${why}"`,
+        hidden: 'Someone sent a private message',
+      }))
+    },
   }
 }

@@ -22,7 +22,7 @@ create table if not exists trope_evidence (
   run_at timestamptz not null default now(), trope text not null, url text not null, title text, query text, provider text, rank int
 );`
 
-export async function connectWarehouse(root) {
+export async function connectWarehouse(root, matchById) {
   const url = process.env.DATABASE_URL
   const pool = new pg.Pool({ connectionString: url, max: 4, ssl: /localhost|127\.0\.0\.1/.test(url) ? false : true })
   pool.on('error', (e) => { whStats.lastError = e.message })
@@ -46,6 +46,9 @@ export async function connectWarehouse(root) {
     try {
       await pool.query(`insert into events (match_id, seq, t, type, actor, target, room, x, z, data) values ${values} on conflict do nothing`, batch.flat())
       whStats.rows += batch.length
+      const per = {}
+      for (const b of batch) per[b[0]] = (per[b[0]] ?? 0) + 1
+      for (const [id, count] of Object.entries(per)) matchById?.(id)?.vendor?.({ vendor: 'neon', count, what: `Saved ${count} game events` })
     } catch (e) { whStats.lastError = e.message }
   }
   setInterval(flush, 700)
@@ -90,9 +93,11 @@ export function alibiScanner(wh) {
     const sql = `select kind, suspect, detail from alibi_findings where match_id = '${esc(m.id)}' and (kind <> 'last_seen_with' or subject in (${missing})) order by t desc limit 6`
     try {
       const r = await bruinQuery(sql)
+      m.vendor?.({ vendor: 'bruin', sticker: 'alibi check', ms: r.ms, what: `Alibi check: compared claims with sightings, found ${r.rows.length} lead${r.rows.length === 1 ? '' : 's'}` })
       return { source: 'bruin', rows: r.rows.map((x) => ({ kind: x.kind, suspect: x.suspect, text: x.detail })), sql: r.sql, ms: r.ms }
     } catch (e) {
       whStats.lastError = e.message
+      m.vendor?.({ vendor: 'bruin', sticker: 'alibi check', ok: false, what: 'Alibi check failed, used local data instead' })
       return { ...local(), error: e.message }
     }
   }

@@ -216,6 +216,7 @@ export class GameView {
     this.pillar.visible = false
     s.add(this.pillar)
     this.bubbles = new Map()
+    this.stickers = []
     // Wire the cats drop in on.
     this.wire = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 12, 6), new THREE.MeshBasicMaterial({ color: '#dfe6ff' }))
     this.wire.visible = false
@@ -277,6 +278,18 @@ export class GameView {
     b.userData.until = this.clock.elapsedTime + 3.2
     e.obj.add(b)
     this.bubbles.set(from, b)
+  }
+
+  // Vendor sticker that floats up from whoever used it.
+  sticker(who, text, color) {
+    const e = this.ents.get(who)
+    if (!e || !e.obj.visible) return
+    const b = label(text, color, 42)
+    b.position.y = 2.75
+    b.scale.multiplyScalar(0.8)
+    b.userData = { born: this.clock.elapsedTime, lane: ((this.lane = (this.lane ?? 0) + 1) % 3) - 1 }
+    e.obj.add(b)
+    this.stickers.push(b)
   }
 
   updateTrail(t) {
@@ -440,6 +453,13 @@ export class GameView {
     }
     if (this.wireAt && t - this.wireAt > 0.15) this.wire.visible = false
     this.updateTrail(t)
+    this.stickers = this.stickers.filter((b) => {
+      const p = (t - b.userData.born) / 2.4
+      if (p >= 1) { b.parent?.remove(b); b.material.map.dispose(); return false }
+      b.position.set(b.userData.lane * 0.7, 2.75 + p * 1.5, 0)
+      b.material.opacity = p > 0.7 ? (1 - p) / 0.3 : 1
+      return true
+    })
     for (const [id, b] of this.bubbles) if (t > b.userData.until) { b.parent?.remove(b); b.material.map.dispose(); this.bubbles.delete(id) }
 
     for (const f of this.fx) {

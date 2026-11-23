@@ -3,10 +3,11 @@ import { clock } from './Hud.jsx'
 import { Ledger } from './Director.jsx'
 import { roomName } from '../shared/map.js'
 import { sfx } from './audio.js'
+import { VendorTotals } from './Debug.jsx'
 
 const TACTIC = { early_strike: 'Strike early', late_strike: 'Strike late', leak_only: 'Leak, never kill', frame: 'Frame someone' }
 
-export default function EndScreen({ s, learning, again }) {
+export default function EndScreen({ s, learning, vlog, again }) {
   const r = s.result
   const name = (id) => s.crew.find((c) => c.id === id)?.name ?? (String(id ?? '').startsWith('dog') ? 'A dog' : 'Someone')
   const mole = s.crew.find((c) => c.id === r.mole)
@@ -47,6 +48,7 @@ export default function EndScreen({ s, learning, again }) {
           </div>
         )}
         <button className="big" onClick={again}>Play again</button>
+        {vlog?.length > 0 && <><h3>What each vendor did this match</h3><VendorTotals log={vlog} /></>}
       </div>
       <div className="panel story">
         <h3>What really happened</h3>

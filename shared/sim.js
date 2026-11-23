@@ -333,6 +333,7 @@ export class Match {
     this.decideLog('captain', 'bruin', `Guard ${roomName(room)} early`, bits.join('; '), true)
     const d = this.dogs.filter((k) => k.state === 'patrol').sort((a, b) => dist(a, roomCenter(room)) - dist(b, roomCenter(room)))[0]
     if (d) this.sendDog(d, roomCenter(room), 'briefing')
+    return d?.id
   }
 
   captainOrders({ orders = [], reason = '', taunt = '' }) {

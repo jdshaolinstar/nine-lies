@@ -90,16 +90,20 @@ export function cleanPlan(p) {
 
 export function thinkerFor() {
   return async (m, c, hint) => {
+    const t0 = Date.now()
+    const label = (what, ok) => m.vendor?.({ vendor: 'runware', who: c.id, sticker: 'thinking', ms: Date.now() - t0, ok, secret: true, what, hidden: `${c.name} is deciding what to do` })
     try {
       const text = await chat([{ role: 'system', content: systemFor(m, c) }, { role: 'user', content: situation(m, c, hint) }])
       const plan = cleanPlan(parseJson(text))
       if (!plan) throw new Error('unusable plan: ' + text.slice(0, 120))
       // Keep one-off duties the rules already decided on.
       if (!plan.say && hint.say && ['body', 'suspect'].includes(hint.say.kind)) plan.say = hint.say
+      label(`${c.name} planned: ${ROOM[plan.goal] ? `hold ${roomName(plan.goal)}` : plan.goal === 'core' ? 'grab the core' : plan.goal === 'escape' ? 'run for the helipad' : `${plan.goal} ${plan.cat ? CAT_NAME[plan.cat] : plan.room ? roomName(plan.room) : ''}`.trim()}. "${plan.reason}"`)
       return plan
     } catch (e) {
       llmStats.failed++
       llmStats.lastError = e.message
+      label(`${c.name}'s plan failed, so the built-in rules took over`, false)
       return null
     }
   }
@@ -108,12 +112,16 @@ export function thinkerFor() {
 export function captainFor(scenario) {
   return async (m) => {
     const recent = m.captain.intel.filter((i) => m.t - i.t < 40).slice(-8)
+    const t0 = Date.now()
     try {
       const text = await chat([
         { role: 'system', content: `You are ${scenario.villain}, the dog captain guarding ${scenario.target}. Smug and theatrical. Reply with ONE JSON object: {"orders":[{"dog":"dog0","room":"kitchen"}], "reason":"max 12 words", "taunt":"max 10 words over the loudspeaker, or empty"}. At most 2 orders. Room ids: ${ROOM_IDS}.` },
         { role: 'user', content: `Time until it fires: ${Math.round(m.timeLeft)}s. Vault ${m.vaultOpen ? 'BREACHED' : 'sealed'}. Core ${m.core.taken ? 'STOLEN, they need the helipad' : 'safe'}. ${m.captain.habits ? `Past heists: ${m.captain.habits}. ` : ''}Dogs: ${m.dogs.map((d) => `${d.id} ${d.state} in ${roomOf(d)}`).join('; ')}. Intel: ${recent.map((i) => `[${Math.round(m.t - i.t)}s ago] ${i.text}`).join(' | ') || 'none'}` },
       ], { maxTokens: 160 })
-      return parseJson(text)
+      const p = parseJson(text)
+      const sent = (p?.orders ?? []).filter((o) => ROOM[o?.room]).map((o) => `${o.dog} to ${roomName(o.room)}`).join(', ')
+      m.vendor?.({ vendor: 'runware', who: p?.orders?.[0]?.dog, sticker: 'orders', ms: Date.now() - t0, secret: true, what: `Dog captain ordered ${sent || 'no change'}`, hidden: 'The dog captain is deciding' })
+      return p
     } catch (e) {
       llmStats.failed++
       llmStats.lastError = e.message

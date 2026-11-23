@@ -62,6 +62,7 @@ export class Session {
           else if (m?.phase === 'play' && m.cat(c.catId).state === 'ok' && m.moleId !== c.catId) m.humans.add(c.catId)
         }
         this.pushLobby()
+        if (m?.vendorLog) c.send({ t: 'vendorAll', log: m.vendorLog.map((r) => this.vendorFor(c, r)) })
         break
       }
       case 'start': if (!m || m.phase !== 'play') this.start(); break
@@ -124,8 +125,12 @@ export class Session {
     this.match.id = id
     this.match.thinker = this.thinkerFor?.(this.match) ?? null
     this.ended = false
-    this.onMatch?.(this.match)
+    const match = this.match
+    match.vendorLog = []
+    match.vendor = (e) => this.vendorCall(match, e)
     for (const c of this.clients.values()) c.send({ t: 'started', you: c.catId, role: c.role })
+    if (this.scenario.why) match.vendor({ vendor: 'telem', what: `${this.scenario.why} Researched before this match.` })
+    this.onMatch?.(match)
   }
 
   tick(dt) {
@@ -140,9 +145,25 @@ export class Session {
       const s = this.learning[m.tactic]
       s.plays++
       if (m.result.winner === 'mole' && !m.result.moleCaught) s.wins++
+      for (const c of this.clients.values()) c.send({ t: 'vendorAll', log: m.vendorLog ?? [] })
       this.onEnd?.(m, this.learning)
     }
     for (const c of this.clients.values()) c.send({ t: 'snap', s: m.viewFor(c.role, c.catId), learning: m.phase === 'end' ? this.learning : undefined })
+  }
+
+  // One call to an outside service. `secret` rows would give the mole away, so
+  // players see a blanked version until the match ends.
+  vendorCall(match, e) {
+    if (match !== this.match) return
+    const row = { id: match.vendorLog.length, t: +match.t.toFixed(1), ...e }
+    match.vendorLog.push(row)
+    for (const c of this.clients.values()) c.send({ t: 'vendor', e: this.vendorFor(c, row) })
+  }
+
+  vendorFor(c, row) {
+    if (!row.secret || c.role === 'director' || this.match?.phase === 'end') return row
+    const { id, t, vendor, ms, ok, hidden } = row
+    return { id, t, vendor, ms, ok, what: hidden ?? 'Hidden until the match ends' }
   }
 
   broadcast(msg) { for (const c of this.clients.values()) c.send(msg) }

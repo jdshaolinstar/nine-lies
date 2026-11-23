@@ -6,11 +6,12 @@ import WebSocket from 'ws'
 const URL = process.argv[2] || 'ws://127.0.0.1:8787/ws?room=test' + (Date.now() % 1e6)
 const open = (role, name) => new Promise((ok) => {
   const ws = new WebSocket(URL)
-  const c = { ws, snaps: [], scan: null, send: (m) => ws.send(JSON.stringify(m)) }
+  const c = { ws, snaps: [], scan: null, vendor: [], send: (m) => ws.send(JSON.stringify(m)) }
   ws.on('message', (raw) => {
     const m = JSON.parse(raw)
     if (m.t === 'snap') c.snaps.push(m.s)
     if (m.t === 'lobby') c.lobby = m
+    if (m.t === 'vendor') c.vendor.push(m.e)
     if (m.t === 'scan' && m.state === 'done') c.scan = m
   })
   ws.on('open', () => { c.send({ t: 'join', role, name }); setTimeout(() => ok(c), 200) })
@@ -45,5 +46,8 @@ await wait(6000)
 assert.ok(a.scan, 'scan answered')
 console.log('scan source:', a.scan.source, a.scan.error ?? '', a.scan.rows.length, 'rows', a.scan.ms ? a.scan.ms + ' ms' : '')
 console.log('radio via:', [...new Set(b.snaps.at(-1).radio.map((m) => m.via ?? 'direct'))].join(', '), '| snapshot bytes:', JSON.stringify(last).length)
+const leaked = a.vendor.filter((e) => e.secret || /planned|traitor/.test(e.what))
+assert.equal(leaked.length, 0, 'debug rows must not reveal secrets to players: ' + JSON.stringify(leaked[0]))
+console.log('vendor rows a player sees:', JSON.stringify(a.vendor.reduce((o, e) => ({ ...o, [e.vendor]: (o[e.vendor] ?? 0) + 1 }), {})))
 for (const c of [a, b, h]) c.ws.close()
 console.log('multiplayer ok')

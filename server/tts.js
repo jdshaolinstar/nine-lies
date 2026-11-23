@@ -37,7 +37,7 @@ async function make(who, text, file) {
   return audio
 }
 
-export function createTts(dataDir) {
+export function createTts(dataDir, onVoice) {
   const dir = path.join(dataDir, 'voices')
   fs.mkdirSync(dir, { recursive: true })
   const get = async (who, text) => {
@@ -52,8 +52,11 @@ export function createTts(dataDir) {
     async handle(url, res) {
       const who = url.searchParams.get('who'), text = url.searchParams.get('text') ?? ''
       if (!VOICES[who] || !said.has(`${who}|${text}`) || text.length > 120) { res.statusCode = 404; return res.end() }
+      const t0 = Date.now()
+      const before = ttsStats.cached
       try {
         const audio = await get(who, text)
+        onVoice?.(who, text, Date.now() - t0, ttsStats.cached > before)
         res.setHeader('content-type', 'audio/mpeg')
         res.setHeader('cache-control', 'public, max-age=86400')
         res.end(audio)
