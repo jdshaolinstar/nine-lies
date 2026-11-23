@@ -44,7 +44,7 @@ Each one is optional at run time; `/api/status` shows which are live.
 
 | Tool | What it does here | Code |
 |---|---|---|
-| **Bruin** | The alibi scan runs a live query through Bruin's Query API and shows its SQL. Mole learning is read back from a Bruin view. Six assets with quality checks. | `bruin/`, `server/warehouse.js` |
+| **Bruin** | The alibi scan runs a live query through Bruin's Query API and shows its SQL. Mole learning is read back from a Bruin view. Seven assets with 17 quality checks. Before each match the dog captain also queries past heists through Bruin. | `bruin/`, `server/warehouse.js` |
 | **Band** | Each cat and the dog captain is a Band agent. Radio calls and leaks between agents travel as Band messages; a whisper mentions one agent, so only that agent gets it. | `server/band.js` |
 | **Runware** | Agent and captain decisions | `server/llm.js` |
 | **Telem** | The viral scenario engine searches the live web for the spy moments people love and picks the next mission, with sources | `scripts/research.mjs` |
