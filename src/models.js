@@ -76,7 +76,7 @@ export function makeCat(color, name) {
   const tail = new THREE.Mesh(new THREE.TubeGeometry(curve, 14, 0.075, 8), fur)
   tail.castShadow = true
   body.add(tail)
-  const core = new THREE.Mesh(geo.sphere, new THREE.MeshStandardMaterial({ color: '#ff3048', emissive: '#ff1030', emissiveIntensity: 3 }))
+  const core = new THREE.Mesh(geo.sphere, new THREE.MeshBasicMaterial({ color: '#ff1a33', toneMapped: false }))
   core.scale.setScalar(0.2)
   core.position.set(0.1, 1.85, 0)
   core.visible = false

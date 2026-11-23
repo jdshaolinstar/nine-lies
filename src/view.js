@@ -192,7 +192,7 @@ export class GameView {
     // The weapon: a glowing core, with a red dot that wanders like a toy.
     this.coreGroup = new THREE.Group()
     add(this.coreGroup, geo.cyl, mat('#2a2d3c', { metalness: 0.6 }), [0, 0.3, 0], [0.5, 0.6, 0.5])
-    this.coreBall = add(this.coreGroup, geo.sphere, new THREE.MeshStandardMaterial({ color: '#ff3048', emissive: '#ff1030', emissiveIntensity: 3 }), [0, 1.1, 0], 0.3)
+    this.coreBall = add(this.coreGroup, geo.sphere, new THREE.MeshBasicMaterial({ color: '#ff1a33', toneMapped: false }), [0, 1.1, 0], 0.3)
     this.coreBeam = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 14, 8), new THREE.MeshBasicMaterial({ color: '#ff3048', transparent: true, opacity: 0.45 }))
     this.coreBeam.position.y = 8
     this.coreGroup.add(this.coreBeam)
@@ -441,6 +441,32 @@ export class GameView {
 
     const me = this.focus ? this.ents.get(this.focus) : null
     const portrait = this.camera.aspect < 1
+    if (this.mode === 'cine' && s) {
+      // Cut to whoever is having the worst night: prey, carrier, chased, mole.
+      if (!this.shotUntil || t > this.shotUntil) {
+        const drama = (c) => (c.plan?.goal === 'hunt' ? 5 : 0) + (c.carry ? 4 : 0) + (c.wire > 0 ? 6 : 0) + (c.detected > 0.4 ? 3 : 0) + (c.plan?.goal === 'shoot' ? 5 : 0) + Math.random() * 2.5 - (c.state !== 'ok' ? 9 : 0)
+        const star = [...s.cats].sort((a, b) => drama(b) - drama(a))[0]
+        this.star = star?.id
+        this.shotUntil = t + 4.5
+        this.angle = Math.random() * 6.28
+        this.low = Math.random() < 0.6
+        this.cut = true
+      }
+      const st = this.ents.get(this.star)
+      if (st) {
+        const p = st.obj.position, a = this.angle + t * 0.12, d = this.low ? 6.2 : 10
+        const want = new THREE.Vector3(p.x + Math.cos(a) * d, this.low ? 3.4 : 8.5, p.z + Math.sin(a) * d)
+        if (this.cut) { this.camera.position.copy(want); this.look.set(p.x, 1, p.z); this.cut = false }
+        this.camera.position.lerp(want, Math.min(1, dt * 3))
+        this.look.lerp(new THREE.Vector3(p.x, 1, p.z), Math.min(1, dt * 6))
+        this.lamp.position.set(p.x, 2.4, p.z)
+        this.lamp.intensity = 10
+        this.ents.forEach((e) => { if (e.kind === 'cat') { e.obj.userData.tag.visible = false; e.obj.userData.horns.visible = false; e.obj.userData.ring.visible = false } })
+      }
+      this.camera.lookAt(this.look)
+      this.renderer.render(this.scene, this.camera)
+      return
+    }
     if (this.mode === 'runner' && me) {
       const p = me.obj.position
       this.look.lerp(new THREE.Vector3(p.x, 0, p.z - 0.5), Math.min(1, dt * 6))

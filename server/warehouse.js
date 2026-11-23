@@ -17,6 +17,9 @@ create index if not exists events_match_type on events (match_id, type);
 create table if not exists matches (
   match_id text primary key, mole text, tactic text, winner text, why text, mole_caught boolean,
   seconds real, humans int, llm boolean, created_at timestamptz not null default now()
+);
+create table if not exists trope_evidence (
+  run_at timestamptz not null default now(), trope text not null, url text not null, title text, query text, provider text, rank int
 );`
 
 export async function connectWarehouse(root) {

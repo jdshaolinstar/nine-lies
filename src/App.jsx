@@ -10,6 +10,8 @@ import EndScreen from './EndScreen.jsx'
 import { DEFAULT_SCENARIO } from '../shared/scenario.js'
 
 const params = new URLSearchParams(location.search)
+// Trailer footage: no HUD, low cameras, starts by itself.
+const CINE = params.has('cine')
 
 export default function App() {
   const canvas = useRef(null)
@@ -26,6 +28,7 @@ export default function App() {
   const [name, setName] = useState('')
   const roleRef = useRef(null)
   const heard = useRef(-1)
+  const cineAgain = useRef(false)
 
   useEffect(() => {
     view.current = new GameView(canvas.current)
@@ -45,7 +48,7 @@ export default function App() {
     else if (m.t === 'snap') {
       const s = m.s
       const r = roleRef.current
-      view.current?.update(s, r === 'runner' && s.phase === 'play' ? 'runner' : 'director', s.you)
+      view.current?.update(s, r === 'runner' && s.phase === 'play' ? 'runner' : CINE ? 'cine' : 'director', s.you)
       const last = s.radio[s.radio.length - 1]
       if (last && last.id > heard.current) {
         if (heard.current >= 0 || last.id < 3) {
@@ -56,6 +59,7 @@ export default function App() {
       }
       setSnap(s)
       if (m.learning) setLearning(m.learning)
+      if (CINE && s.phase === 'end' && !cineAgain.current) { cineAgain.current = true; setTimeout(() => { cineAgain.current = false; conn.current?.send({ t: 'start' }) }, 1500) }
     }
   }
   const statusRef = useRef(null)
@@ -80,7 +84,7 @@ export default function App() {
   useEffect(() => {
     const j = params.get('join')
     if (j && status) enter('server', j)
-    const solo = params.get('solo')
+    const solo = CINE ? 'director' : params.get('solo')
     if (solo && status !== undefined && !roleRef.current) enter('solo', solo)
   }, [status])
 
@@ -93,8 +97,8 @@ export default function App() {
       {role && !inMatch && <Lobby lobby={lobby} status={status} send={send} role={role} net={net} />}
       {snap?.phase === 'play' && role === 'runner' && <Hud s={snap} send={send} scan={scan} scenario={lobby?.scenario ?? DEFAULT_SCENARIO} />}
       {showHacker && <Hacker s={snap} send={send} scan={scan} />}
-      {snap?.phase === 'play' && role === 'director' && <Director s={snap} scan={scan} services={lobby?.services} />}
-      {snap?.phase === 'end' && <EndScreen s={snap} learning={learning} again={() => send({ t: 'start' })} />}
+      {snap?.phase === 'play' && role === 'director' && !CINE && <Director s={snap} scan={scan} services={lobby?.services} />}
+      {snap?.phase === 'end' && !CINE && <EndScreen s={snap} learning={learning} again={() => send({ t: 'start' })} />}
       {role && net === 'closed' && <div className="toast bad">Lost the server. Reconnecting…</div>}
     </div>
   )
