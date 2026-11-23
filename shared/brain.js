@@ -70,7 +70,7 @@ function loyalDecide(m, c) {
   if (caged && m.timeLeft > 60 && m.rng() < 0.6) return { goal: 'rescue', cat: caged.id, reason: `${caged.name} is in a cage` }
 
   if (m.vaultOpen) {
-    if (!m.core.taken || (!m.core.by && c.seen.size >= 0 && dist(c, m.core) < 9)) return { goal: 'core', reason: 'The vault is open', say: sayGuard }
+    if (!m.core.by) return { goal: 'core', reason: m.core.taken ? 'The core is on the floor, grab it' : 'The vault is open', say: sayGuard }
     return { goal: 'escape', reason: 'The core is out, get to the helicopter', say: sayGuard }
   }
 
@@ -100,7 +100,7 @@ function moleDecide(m, c) {
     if (c.lastSeen[carrier.id]) return { goal: 'hunt', cat: carrier.id, bold: true, reason: 'Catch the carrier', leak: 'helipad', leakWhy: 'the core is heading for the helipad' }
     return { goal: 'goto', room: 'helipad', leak: 'helipad', leakWhy: 'the core is moving', reason: 'Cut off the helipad' }
   }
-  if (m.vaultOpen && !m.core.taken) return { goal: 'goto', room: 'atrium', leak: 'atrium', leakWhy: 'the vault is open', reason: 'Wait outside the vault' }
+  if (m.vaultOpen && !m.core.taken && !(ready && prey.length && c.clawCd <= 0)) return { goal: 'goto', room: 'atrium', leak: 'atrium', leakWhy: 'the vault is open', reason: 'Wait outside the vault' }
 
   // Just killed: get away and fake an alibi.
   if (m.t - c.lastKillAt < 12) {

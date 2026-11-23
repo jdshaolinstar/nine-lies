@@ -8,7 +8,7 @@ import { DEFAULT_SCENARIO } from '../shared/scenario.js'
 import { thinkerFor, captainFor, chat, llmStats } from './llm.js'
 import { connectBand, bandStats } from './band.js'
 import { connectWarehouse, alibiScanner, learnedTactics, bruinQuery, whStats } from './warehouse.js'
-import { tts, ttsReady } from './tts.js'
+import { createTts, ttsReady, allowLine, ttsStats } from './tts.js'
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const DATA = path.join(ROOT, 'data')
@@ -36,12 +36,16 @@ export async function createServices() {
     })
   }
   if (fs.existsSync(path.join(DATA, 'band-agents.json'))) await attempt('band', async () => { band = await connectBand(DATA) })
-  state.voices = ttsReady()
+  const tts = createTts(DATA)
+  if (ttsReady()) await attempt('voices', () => tts.get('captain', 'Good evening, kittens.'))
 
   const hooks = {
     thinkerFor: () => (state.llm ? thinkerFor() : null),
     scanner: state.bruin ? alibiScanner(wh) : undefined,
-    onEvent: wh ? (id, e) => wh.event(id, e) : undefined,
+    onEvent(id, e) {
+      if (e.type === 'radio' && e.data.text) allowLine(e.actor ?? e.data.from, e.data.text)
+      wh?.event(id, e)
+    },
     onMatch(m) {
       if (band) m.transport = band
       if (state.llm) m.captainThinker = captainFor(scenario)
@@ -63,7 +67,7 @@ export async function createServices() {
   return {
     hooks, learning, scenario,
     status: () => ({ ...state }),
-    detail: () => ({ problems, llm: llmStats, band: bandStats, warehouse: whStats }),
-    tts,
+    detail: () => ({ problems, llm: llmStats, band: bandStats, warehouse: whStats, voices: ttsStats }),
+    tts: tts.handle,
   }
 }

@@ -244,13 +244,14 @@ export class Match {
     c.capturedAt = this.t
     c.path = null
     c.x = CAGES[c.cage].x; c.z = CAGES[c.cage].z
-    dog.state = 'patrol'; dog.chase = null; dog.path = null; dog.wait = 1.5; dog.meter = {}
+    dog.state = 'patrol'; dog.chase = null; dog.path = null; dog.wait = 1.5; dog.meter = {}; dog.spot = { x: roomCenter('kennel').x, z: roomCenter('kennel').z }; dog.fed = this.t + 9
     this.checkEnd()
   }
 
   dropCore(c) {
     this.core.by = null; this.core.x = c.x; this.core.z = c.z
     this.log('core_dropped', c.id, null)
+    for (const o of this.alive()) { this.note(o, `The core was dropped in ${roomName(roomOf(c))}`); o.nextThink = Math.min(o.nextThink, this.t + 1 + this.rng()); o.urgent = true }
   }
 
   noise(p, radius, why) {
@@ -524,7 +525,9 @@ export class Match {
         c.thinking = false
         c.thinkTook = this.t - started
         if (this.phase !== 'play' || c.state !== 'ok') return
-        if (plan) this.setIntent(c, plan, 'llm')
+        if (plan && c.isMole && ['hunt', 'shoot'].includes(hint.goal) && !['hunt', 'shoot'].includes(plan.goal)) {
+          this.setIntent(c, { ...hint, say: plan.say, lie: plan.lie, leak: plan.leak }, 'rule')
+        } else if (plan) this.setIntent(c, plan, 'llm')
         else { c.llmOff = this.t + 12; this.setIntent(c, hint, 'rule') }
       }).catch(() => { c.thinking = false; c.llmOff = this.t + 12 })
       return
@@ -538,6 +541,13 @@ export class Match {
     if (['hunt', 'shoot', 'follow', 'rescue'].includes(i.goal) && (!this.cat(i.cat) || i.cat === c.id)) return
     if (['hunt'].includes(i.goal) && !c.isMole && !c.turned && (c.suspicion[i.cat] ?? 0) < 0.5) return
     if (i.goal === 'goto' && !ROOM[i.room]) return
+    if (!c.isMole && this.vaultOpen) {
+      // Everyone can see the core glow: if nobody has it, go and get it.
+      if (!this.core.by && ['escape', 'gennorth', 'gensouth'].includes(i.goal)) i.goal = 'core'
+      else if (this.core.by && ['gennorth', 'gensouth'].includes(i.goal)) i.goal = 'escape'
+      if (this.core.by === c.id) i.goal = 'escape'
+    }
+    if (c.isMole && i.goal === 'core') { i.goal = 'goto'; i.room = 'atrium' }
     const same = c.intent && c.intent.goal === i.goal && c.intent.room === i.room && c.intent.cat === i.cat
     c.intent = { ...i, source, since: same ? c.intent.since : this.t }
     if (!same) {
@@ -546,7 +556,7 @@ export class Match {
         ?? (i.goal === 'goto' ? `Go to ${roomName(i.room)}` : `${i.goal} ${CAT_NAME[i.cat] ?? ''}`.trim())
       this.decideLog(c.id, source, label, i.reason ?? '', c.isMole)
     }
-    if (i.leak && c.isMole && ROOM[i.leak] && this.t - (c.leakAt ?? -99) > 14) { c.leakAt = this.t; this.leak(i.leak, i.leakWhy ?? `crew heading to ${roomName(i.leak)}`) }
+    if (i.leak && c.isMole && ROOM[i.leak] && this.t - (c.leakAt ?? -99) > 18 && !(this.lastLeak?.room === i.leak && this.t - this.lastLeak.t < 50)) { c.leakAt = this.t; this.lastLeak = { room: i.leak, t: this.t }; this.leak(i.leak, i.leakWhy ?? `crew heading to ${roomName(i.leak)}`) }
     if (i.say?.kind) {
       c.isLying = !!i.lie
       this.say(c.id, i.say, source)
@@ -673,7 +683,7 @@ export class Match {
     for (const c of this.alive()) {
       const dd = dist(d, c)
       // The mole is on the payroll: dogs let it pass.
-      const sees = !c.isMole && dd < (c.mode === 'sneak' ? range * 0.72 : range) &&
+      const sees = !c.isMole && !(d.fed > this.t) && dd < (c.mode === 'sneak' ? range * 0.72 : range) &&
         (Math.abs(angleDiff(angleTo(d, c), d.dir)) < 0.62 || dd < 0.9) && lineOfSight(d, c, this.locked)
       d.meter[c.id] = clamp((d.meter[c.id] ?? 0) + (sees ? dt * (0.7 + 1.5 * (1 - dd / range)) : -dt * 0.7), 0, 1.2)
       c.detected = Math.max(sees ? d.meter[c.id] : 0, (c.detected ?? 0) - dt * 0.5)
@@ -797,7 +807,7 @@ export class Match {
         for (const c of this.alive()) { c.nextThink = this.t + this.rng() * 1.5; this.note(c, 'The vault is open') }
       }
     } else if (!this.core.by) {
-      const c = this.alive().find((o) => dist(o, this.core) < 0.9 && o.stun <= 0)
+      const c = this.alive().find((o) => dist(o, this.core) < 0.9 && o.stun <= 0 && (!o.isMole || this.humans.has(o.id)))
       if (c) {
         // The wire drop: hang still over the pedestal for a moment, then you have it.
         c.wire += dt
@@ -863,7 +873,7 @@ export class Match {
     return {
       t: f(this.t), phase: this.phase, timeLeft: f(this.timeLeft), role, you: catId ?? null,
       gens: this.gens.map((g) => ({ id: g.id, held: g.held })), genProgress: f(this.genProgress), vaultOpen: this.vaultOpen,
-      core: god || role === 'hacker' || !this.core.taken || (me && (this.core.by === me.id || me.seen.has(this.core.by) || (!this.core.by && this.canSee(me, this.core))))
+      core: god || role === 'hacker' || !this.core.taken || !this.core.by || (me && (this.core.by === me.id || me.seen.has(this.core.by) || (!this.core.by && this.canSee(me, this.core))))
         ? { x: f(this.core.x), z: f(this.core.z), by: this.core.by, taken: this.core.taken } : { taken: true, hidden: true },
       setPiece: this.setPiece, lasers: this.lasers.map((l) => [f(l.x1), f(l.z1), f(l.x2), f(l.z2)]),
       locked: [...this.locked], blackout: f(this.blackout), camLoop: Object.keys(this.camLoop),

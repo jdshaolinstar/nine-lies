@@ -10,12 +10,13 @@ loadEnv()
 const KEY = process.env.TELEM_API_KEY
 if (!KEY) { console.error('Set TELEM_API_KEY in .env first'); process.exit(1) }
 
+// Neutral on purpose: no query names a trope, so none gets a head start.
 const QUERIES = [
   'most iconic spy movie scenes of all time ranked',
   'best heist movie scenes fans love most',
   'viral spy thriller scene social media reaction 2026',
-  'greatest double cross betrayal scenes in heist films',
-  'best laser hallway and vault break-in scenes in movies',
+  'what makes a spy movie scene memorable to audiences',
+  'fan favorite moments in spy and heist movies discussion',
 ]
 // Generic trope words only. The game copies no film's scene, names or art.
 const TROPES = {

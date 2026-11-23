@@ -88,7 +88,7 @@ export class Session {
     this.hackerMute = m.t + 1.5
     const names = { guard: 'Dog in', clear: 'Clear:', going: 'Go to' }
     m.radio.push({ id: m.radio.length, t: +m.t.toFixed(1), from: 'hacker', to: 'all', kind: msg.kind, room: msg.room, cat: null, source: 'human', text: `${names[msg.kind]} ${roomLabel(msg.room)}` })
-    m.log('radio', null, null, { from: 'hacker', kind: msg.kind, room: msg.room })
+    m.log('radio', null, null, { from: 'hacker', kind: msg.kind, room: msg.room, text: m.radio.at(-1).text })
     for (const o of m.alive()) {
       m.note(o, `Hacker said: ${names[msg.kind]} ${roomLabel(msg.room)}`, { told: 'hacker' })
       if (msg.kind === 'going' && !m.humans.has(o.id)) { o.orders.push({ t: m.t, kind: 'regroup', room: msg.room, from: 'hacker' }); o.nextThink = Math.min(o.nextThink, m.t + 0.6) }

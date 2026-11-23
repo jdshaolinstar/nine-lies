@@ -63,7 +63,7 @@ function situation(m, c, hint) {
   }).join('; ')
   const dogs = m.dogs.filter((d) => c.seen.has(d.id)).map((d) => `${d.state} dog in ${roomName(roomOf(d))}`).join(', ')
   return `Time left ${Math.round(m.timeLeft)}s. You are in ${roomOf(c)}. Bullets ${c.bullets}. Claw ${c.clawCd > 0 ? `ready in ${Math.ceil(c.clawCd)}s` : 'ready'}.
-Generators: ${m.vaultOpen ? 'done, vault OPEN' : m.gens.map((g) => `${g.id} ${g.held ? 'held' : 'empty'}`).join(', ')}. Core: ${m.core.by === c.id ? 'YOU carry it' : m.core.taken ? 'taken' : 'in vault'}.
+Generators: ${m.vaultOpen ? 'done, vault OPEN' : m.gens.map((g) => `${g.id} ${g.held ? 'held' : 'empty'}`).join(', ')}. Core: ${m.core.by === c.id ? 'YOU carry it, go to helipad' : m.core.by ? 'a crewmate carries it, escort to helipad' : m.core.taken ? `lying on the floor in ${roomName(roomOf(m.core))}, someone must grab it` : m.vaultOpen ? 'in the OPEN vault, someone must grab it' : 'locked in vault'}.
 Crew: ${crew}.
 Dogs you see: ${dogs || 'none'}.
 Recent: ${c.notes.slice(-9).map((n) => `[${ago(n.t)}] ${n.text}`).join(' | ') || 'nothing'}
