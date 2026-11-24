@@ -80,7 +80,8 @@ export default function Hacker({ s, send, scan }) {
       for (const cat of st.cats) {
         g.fillStyle = cat.color
         g.beginPath(); g.arc(px(cat.x), px(cat.z), Math.max(5, px(0.6)), 0, 7); g.fill()
-        g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.stroke()
+        g.strokeStyle = '#fff'; g.lineWidth = cat.human ? 3 : 1.5; g.stroke()
+        if (cat.human) { g.globalAlpha = 0.5 + Math.sin(performance.now() / 200) * 0.4; g.beginPath(); g.arc(px(cat.x), px(cat.z), px(1.5), 0, 7); g.stroke(); g.globalAlpha = 1 }
         g.fillText(cat.name, px(cat.x), px(cat.z) - px(0.9))
       }
       if (!st.core.hidden) { g.fillStyle = '#ff3048'; g.beginPath(); g.arc(px(st.core.x), px(st.core.z), px(0.4), 0, 7); g.fill() }
@@ -109,7 +110,7 @@ export default function Hacker({ s, send, scan }) {
   return (
     <div className="hacker">
       <div className="hk-top"><b>{clock(s.timeLeft)}</b><span>{s.core.taken ? 'Core is out!' : s.vaultOpen ? 'Vault open' : `Generators: ${s.gens.filter((g) => g.held).length}/2`}</span></div>
-      <p className="eyes">You&apos;re the crew&apos;s eyes. Show them the dogs and lock doors behind them.</p>
+      <p className="eyes">{s.crew.some((c) => c.human) ? <>Connected to {s.crew.filter((c) => c.human).map((c) => <b key={c.id} style={{ color: c.color }}>{c.name} </b>)}. Show them the dogs and lock doors behind them.</> : 'No human runner here. You are helping the AI crew.'}</p>
       <canvas ref={ref} onPointerDown={tap} />
       <p className="hint">{hint[tool]}</p>
       <div className="tools">

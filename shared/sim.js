@@ -430,6 +430,7 @@ export class Match {
       this.hackCd.ping = 1
       this.pings.push({ dog: id, until: this.t + 6 })
     } else return false
+    this.hackNote = { t: this.t, text: { door: this.locked.has(id) ? 'locked a door' : 'opened a door', cam: `blinded the ${roomName(id)} camera`, blackout: 'cut the lights', ping: 'marked a dog for you', alarm: 'set off a decoy alarm' }[a] }
     this.log('hack', null, null, { action: a, id, room: ROOM[id] ? id : null })
     return true
   }
@@ -918,7 +919,7 @@ export class Match {
     const god = role === 'director' || this.phase === 'end'
     const ghost = me && me.state !== 'ok'
     const showCat = (c) => god || c === me || (me && (me.seen.has(c.id) || ghost)) ||
-      (role === 'hacker' && c.state === 'ok' && ROOM[roomOf(c)]?.cam)
+      (role === 'hacker' && (this.humans.has(c.id) || (c.state === 'ok' && ROOM[roomOf(c)]?.cam)))
     const showDog = (d) => god || role === 'hacker' || (me && (me.seen.has(d.id) || ghost || this.pings.some((p) => p.dog === d.id)))
     const f = (n) => +n.toFixed(2)
     const heard = this.radio.filter((m) => god || m.to === 'all' || m.from === catId || m.to === catId || (role === 'hacker' && m.to === 'all')).slice(-14)
@@ -946,6 +947,7 @@ export class Match {
       dogs: this.dogs.filter(showDog).map((d) => ({ id: d.id, x: f(d.x), z: f(d.z), dir: f(d.dir), state: d.state, speed: f(d.speed) })),
       fx: this.fx.filter((e) => god || !me || ghost || e.kind === 'shot' || e.kind === 'alarm' || this.canSee(me, e)).map((e) => ({ ...e })),
       radio: god ? heard : heard.map(({ id, t, from, to, kind, room, cat, text, via }) => ({ id, t, from, to, kind, room, cat, text, via })), scansLeft: this.scansLeft, pings: this.pings.map((p) => p.dog),
+      hackNote: this.hackNote && this.t - this.hackNote.t < 3 ? this.hackNote.text : null,
       heardShot: me?.heardShot && this.t - me.heardShot.t < 4 ? me.heardShot.dir : null,
       vote: this.vote ? { by: this.vote.by, left: f(this.vote.until - this.t), votes: god ? this.vote.votes : Object.fromEntries(Object.keys(this.vote.votes).map((k) => [k, true])), options: this.cats.filter((c) => c.state !== 'cut').map((c) => c.id) } : null,
       lastVote: this.lastVote && this.t - this.lastVote.t < 6 ? { out: this.lastVote.out, wasMole: this.lastVote.wasMole, votes: this.lastVote.votes } : null,

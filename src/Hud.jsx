@@ -150,6 +150,7 @@ export default function Hud({ s, send, scan, scenario }) {
 
       {out && <div className="banner">{myStatus === 'captured' ? 'CAGED. A crewmate can free you, or wait while you pick the lock.' : myStatus === 'cut' ? 'The crew voted you out.' : 'You were taken out. Watch what happens as a ghost.'}</div>}
       {s.heardShot && <div className="banner shot">BANG! Gunshot to the {s.heardShot}</div>}
+      {s.hackNote && <div className="banner hk">Your hacker {s.hackNote}</div>}
       {s.blackout > 0 && <div className="banner soft">Lights out! {s.blackout.toFixed(0)}s</div>}
 
       {!out && !s.traitor && trouble && !s.vote && !me?.calledVote && (
