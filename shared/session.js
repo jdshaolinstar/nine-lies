@@ -65,7 +65,8 @@ export class Session {
         if (m?.vendorLog) c.send({ t: 'vendorAll', log: m.vendorLog.map((r) => this.vendorFor(c, r)) })
         break
       }
-      case 'start': if (!m || m.phase !== 'play') this.start(); break
+      case 'start': if (!m || m.phase !== 'play') this.start(msg.traitor, c); break
+      case 'tip': if (c.catId && m) m.tip(c.catId); break
       case 'lobby': if (!m || m.phase === 'end') { this.match = null; this.pushLobby() } break
       case 'input': if (c.catId && m) m.setInput(c.catId, msg); break
       case 'act': if (c.catId && m) m.act(c.catId, msg.a); break
@@ -110,13 +111,14 @@ export class Session {
     this.broadcast({ t: 'scan', state: 'done', ...out })
   }
 
-  start() {
+  start(traitor, by) {
     const humans = [...this.clients.values()].filter((c) => c.role === 'runner' && c.catId)
     this.matchNo++
     const id = `${Date.now().toString(36)}-${this.matchNo}`
     this.match = new Match({
       seed: Math.floor(Math.random() * 1e9),
       humans: humans.map((c) => c.catId),
+      moleId: traitor === 'me' && by?.catId ? by.catId : traitor === 'any' ? CAT_DEFS[Math.floor(Math.random() * CAT_DEFS.length)].id : undefined,
       tactic: this.pickTactic(),
       setPiece: this.scenario.setPiece,
       catNames: Object.fromEntries(humans.filter((c) => c.name !== 'Guest').map((c) => [c.catId, c.name])),
@@ -142,9 +144,12 @@ export class Session {
     if (n >= 5) this.acc = 0
     if (m.phase === 'end' && !this.ended) {
       this.ended = true
+      // Only AI traitors teach the AI.
       const s = this.learning[m.tactic]
-      s.plays++
-      if (m.result.winner === 'mole' && !m.result.moleCaught) s.wins++
+      if (s) {
+        s.plays++
+        if (m.result.winner === 'mole' && !m.result.moleCaught) s.wins++
+      }
       for (const c of this.clients.values()) c.send({ t: 'vendorAll', log: m.vendorLog ?? [] })
       this.onEnd?.(m, this.learning)
     }

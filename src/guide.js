@@ -1,4 +1,4 @@
-import { GENERATORS, HELIPAD, CORE, roomName, roomOf } from '../shared/map.js'
+import { GENERATORS, HELIPAD, CORE, roomName, roomOf, roomCenter } from '../shared/map.js'
 import { dist } from '../shared/util.js'
 
 // The one thing this player should do next, in plain words.
@@ -9,6 +9,16 @@ export function guide(s) {
   const dog = s.dogs.find((d) => d.state === 'chase' && dist(d, me) < 8)
   const warn = dog ? 'A dog sees you. RUN!' : me.detected > 0.35 ? 'Get out of the light!' : null
 
+  if (s.traitor) {
+    const prey = s.cats.filter((c) => c.id !== me.id && c.state === 'ok').sort((a, b) => dist(a, me) - dist(b, me))
+    const near = prey[0]
+    const watched = prey.length > 1
+    const carrier = prey.find((c) => c.carry)
+    if (carrier) return { step, text: `${carrier.name} has the core! Stop them: F to shoot`, target: carrier }
+    if (near) return { step, text: s.t < s.grace ? 'Blend in for now. You can strike in ' + Math.ceil(s.grace - s.t) + 's' : watched ? 'Too many witnesses. Wait for one to be alone' : `${near.name} is alone. Get behind them and press SPACE`, target: near }
+    const last = s.crew.filter((c) => c.lastSeen && !['dead', 'captured', 'cut'].includes(c.status)).sort((a, b) => a.lastSeen.ago - b.lastSeen.ago)[0]
+    return { step, text: s.core.taken ? 'They have the core. Cut them off at the green H' : last ? `Find someone alone. ${last.name} was last in ${roomName(last.lastSeen.room)}` : 'Find someone alone', target: s.core.taken ? HELIPAD : last ? roomCenter(last.lastSeen.room) : null }
+  }
   if (me.carry) return { step, warn, text: 'You have the core! Run to the green H', target: HELIPAD }
   if (!s.vaultOpen) {
     const held = (id) => s.gens.find((g) => g.id === id).held

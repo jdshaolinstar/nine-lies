@@ -46,11 +46,13 @@ async function search(query) {
 }
 
 const evidence = []
+const asked = []
 for (const q of QUERIES) {
   try {
     const rows = await search(q)
     console.log(`${rows.length} results: ${q}`)
     rows.forEach((r) => evidence.push({ ...r, query: q }))
+    asked.push({ q, results: rows.length })
   } catch (e) { console.error(q, '->', e.message) }
 }
 // One vote per page, weighted by search rank, so a long page can't win alone.
@@ -78,10 +80,14 @@ const scenario = {
   ...DEFAULT_SCENARIO, id: `viral-${top.id}`, title: pick('title'), villain: pick('villain'), villainLine: pick('villainLine'), target: pick('target'), briefing: pick('briefing'),
   setPiece: top.id,
   why: `Telem found ${pages.length} pages about the spy and heist scenes people love. ${SET_PIECES[top.id].split(':')[0]} led with ${top.pages}.`,
+  research: { queries: asked, providers: [...new Set(evidence.map((e) => e.provider))], found: evidence.length, unique: new Set(evidence.map((e) => e.url)).size, kept: pages.length, board: board.map(({ id, pages: n, score }) => ({ id, pages: n, score })) },
   sources: top.sources, board: board.map(({ id, pages: n, score }) => ({ id, pages: n, score })), researchedAt: new Date().toISOString(),
 }
 fs.mkdirSync('data', { recursive: true })
 fs.writeFileSync('data/scenario.json', JSON.stringify(scenario, null, 2))
+// The static build has no server, so it reads the same mission from here.
+fs.mkdirSync('public', { recursive: true })
+fs.writeFileSync('public/scenario.json', JSON.stringify(scenario, null, 2))
 console.log(`Next mission: ${scenario.title} (${top.id})`)
 
 // Keep the evidence where Bruin can rank it (bruin/assets/60_trope_ranking.sql).

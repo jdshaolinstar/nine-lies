@@ -82,8 +82,13 @@ export class Match {
     this.tactic = tactic ?? this.rng.pick(TACTICS)
     this.mole = this.cat(this.moleId)
     this.mole.isMole = true
+    this.humanMole = this.humans.has(this.moleId)
+    if (this.humanMole) this.tactic = 'human'
+    // A person playing the traitor needs time to work: sooner strikes, slower vault, every dog.
+    this.killGrace = this.humanMole ? 10 : KILL_GRACE
+    this.vaultSeconds = this.humanMole ? 14 : 5
 
-    this.dogs = (this.humans.size ? PATROLS.slice(0, 3) : PATROLS).map((route, i) => ({
+    this.dogs = (this.humans.size && !this.humanMole ? PATROLS.slice(0, 3) : PATROLS).map((route, i) => ({
       id: 'dog' + i, kind: 'dog', ...roomCenter(route[0]), dir: this.rng() * 6.28, state: 'patrol', route, leg: 0,
       path: null, pathAt: 0, wait: 1 + this.rng() * 2, target: null, chase: null, lost: 0, ko: 0, meter: {}, speed: 0,
     }))
@@ -147,7 +152,7 @@ export class Match {
       else this.capture(c, v)
       return
     }
-    if (this.t < KILL_GRACE) { c.clawCd = 1; return }
+    if (this.t < this.killGrace) { c.clawCd = 1; return }
     if (this.behind(c, v)) this.kill(c, v, 'claw')
     else {
       // Seen coming: both are knocked apart and both know.
@@ -169,7 +174,7 @@ export class Match {
     const inArc = (o) => dist(c, o) < 9 && Math.abs(angleDiff(angleTo(c, o), c.dir)) < 0.4 && lineOfSight(c, o, this.locked)
     const targets = [...this.cats.filter((o) => o !== c && o.state === 'ok'), ...this.dogs.filter((d) => d.state !== 'ko')]
       .filter(inArc).sort((a, b) => dist(c, a) - dist(c, b))
-    if (this.t < KILL_GRACE && targets[0]?.kind === 'cat') return
+    if (this.t < this.killGrace && targets[0]?.kind === 'cat') return
     c.bullets--
     const v = targets[0]
     const end = v ? { x: v.x, z: v.z } : { x: c.x + Math.cos(c.dir) * 8, z: c.z + Math.sin(c.dir) * 8 }
@@ -301,6 +306,16 @@ export class Match {
     for (const o of ears) if (!remote.includes(o)) hear(o)
     if (remote.length) this.transport.send(this, msg, remote.map((o) => o.id), (id, via) => hear(this.cat(id), via))
     return msg
+  }
+
+  // A human traitor's button: tell the captain where the crew is.
+  tip(id) {
+    const c = this.cat(id)
+    if (!c?.isMole || c.state !== 'ok' || this.phase !== 'play' || this.t - (c.leakAt ?? -99) < 15) return
+    c.leakAt = this.t
+    const seen = Object.entries(c.lastSeen).filter(([k]) => this.cat(k).state === 'ok').sort((a, b) => b[1].t - a[1].t)[0]
+    const room = seen ? seen[1].room : roomOf(c)
+    this.leak(room, seen ? `${CAT_NAME[seen[0]]} is in ${roomName(room)}` : `the crew is near ${roomName(room)}`)
   }
 
   // The mole's private line to the dog captain.
@@ -609,7 +624,7 @@ export class Match {
 
     // Loyal cats defend themselves with the one bullet when they are sure.
     const sure = this.alive().find((o) => (c.suspicion[o.id] ?? 0) >= 0.95 && c.seen.has(o.id) && o !== c)
-    if (sure && !c.isMole && c.bullets > 0 && dist(c, sure) < 7 && this.t > KILL_GRACE) {
+    if (sure && !c.isMole && c.bullets > 0 && dist(c, sure) < 7 && this.t > this.killGrace) {
       c.dir = angleTo(c, sure)
       c.aim = (c.aim ?? 0) + dt
       if (c.aim > 0.7) { c.aim = 0; this.decideLog(c.id, 'rule', `Shoot ${sure.name}`, 'Certain they are the mole'); this.shoot(c) }
@@ -652,7 +667,7 @@ export class Match {
     if (i.goal === 'hunt') {
       if (!c.seen.has(prey.id)) return this.follow(c, ls, 'walk', 0.5)
       const eyes = this.alive().some((o) => o !== c && o !== prey && this.canSee(o, c))
-      if (this.t < KILL_GRACE || c.clawCd > 0 || (eyes && !i.bold)) return dist(c, prey) > 3 ? this.follow(c, prey, 'walk', 2.6) : null
+      if (this.t < this.killGrace || c.clawCd > 0 || (eyes && !i.bold)) return dist(c, prey) > 3 ? this.follow(c, prey, 'walk', 2.6) : null
       if (dist(c, prey) < CLAW_RANGE * 0.9 && this.behind(c, prey)) { c.dir = angleTo(c, prey); this.claw(c); c.nextThink = this.t + 0.4; return null }
       // Circle to the victim's back.
       const back = { x: prey.x - Math.cos(prey.dir) * 0.9, z: prey.z - Math.sin(prey.dir) * 0.9 }
@@ -823,7 +838,7 @@ export class Match {
         g.held = g.by.length > 0
       }
       const both = this.gens.every((g) => g.held)
-      this.genProgress = clamp(this.genProgress + (both ? dt / 5 : -dt / 25), 0, 1)
+      this.genProgress = clamp(this.genProgress + (both ? dt / this.vaultSeconds : -dt / 25), 0, 1)
       if (this.genProgress >= 1) {
         this.vaultOpen = true
         this.locked.delete('v1'); this.locked.delete('v2')
@@ -831,7 +846,7 @@ export class Match {
         for (const c of this.alive()) { c.nextThink = this.t + this.rng() * 1.5; this.note(c, 'The vault is open') }
       }
     } else if (!this.core.by) {
-      const c = this.alive().find((o) => dist(o, this.core) < 0.9 && o.stun <= 0 && (!o.isMole || this.humans.has(o.id)))
+      const c = this.alive().find((o) => dist(o, this.core) < 0.9 && o.stun <= 0 && !o.isMole)
       if (c) {
         // The wire drop: hang still over the pedestal for a moment, then you have it.
         c.wire += dt
@@ -879,7 +894,8 @@ export class Match {
     const out = this.cats.filter((c) => c.state === 'ok' && !c.isMole && dist(c, HELIPAD) < 9 && roomOf(c) === 'helipad')
     const share = winner === 'crew' && out.length ? Math.round(9_000_000 / out.length) : 0
     const moleCaught = this.mole.state === 'cut' || this.mole.state === 'dead'
-    this.result = { winner, why, mole: this.moleId, tactic: this.tactic, moleCaught, escaped: out.map((c) => c.id), share, t: +this.t.toFixed(1) }
+    const spyPaid = winner === 'mole' && !moleCaught ? 9_000_000 : 0
+    this.result = { winner, spyPaid, why, mole: this.moleId, tactic: this.tactic, moleCaught, escaped: out.map((c) => c.id), share, t: +this.t.toFixed(1) }
     this.log('end', null, null, this.result)
   }
 
@@ -907,6 +923,7 @@ export class Match {
     const f = (n) => +n.toFixed(2)
     const heard = this.radio.filter((m) => god || m.to === 'all' || m.from === catId || m.to === catId || (role === 'hacker' && m.to === 'all')).slice(-14)
     return {
+      ...(me?.isMole ? { traitor: true, grace: this.killGrace, tipIn: f(Math.max(0, 15 - (this.t - (me.leakAt ?? -99)))) } : {}),
       t: f(this.t), phase: this.phase, timeLeft: f(this.timeLeft), role, you: catId ?? null,
       gens: this.gens.map((g) => ({ id: g.id, held: g.held })), genProgress: f(this.genProgress), vaultOpen: this.vaultOpen,
       core: god || role === 'hacker' || !this.core.taken || !this.core.by || (me && (this.core.by === me.id || me.seen.has(this.core.by) || (!this.core.by && this.canSee(me, this.core))))

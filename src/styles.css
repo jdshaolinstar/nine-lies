@@ -104,7 +104,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--gold); outl
 .end { position: fixed; inset: 0; background: #05060cd8; display: grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 14px; padding: 4vh 3vw; overflow: auto; align-items: start; }
 .end .panel { max-height: 92vh; overflow: auto; }
 .result h1 { margin: 6px 0 12px; font-size: clamp(28px, 3.6vw, 52px); line-height: 1; font-weight: 900; }
-.result h1.crew { color: var(--mint); } .result h1.mole { color: var(--red); }
+.result h1.won-crew { color: var(--mint); } .result h1.won-mole { color: var(--red); }
 .learn { margin: 16px 0; font-size: 13px; } .learn h3 { margin: 0 0 6px; }
 .learn > div { display: grid; grid-template-columns: 120px 1fr 70px; gap: 8px; align-items: center; padding: 3px 0; opacity: 0.7; } .learn .now { opacity: 1; font-weight: 700; } .learn .bar { width: 100%; }
 .story p { margin: 5px 0; font-size: 14px; } .story .ev-kill, .story .ev-turned { color: #ff8090; font-weight: 700; } .story .ev-leak { color: var(--gold); } .story .ev-vault_open, .story .ev-core_taken { color: var(--mint); }
@@ -166,3 +166,20 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--gold); outl
 .keybar kbd { font: 700 11px ui-monospace, monospace; color: #000; background: var(--gold); border-radius: 4px; padding: 1px 5px; margin-right: 5px; }
 .keybar button { background: #1b2342; border: 1px solid var(--line); border-radius: 99px; padding: 2px 12px; font-size: 12px; white-space: nowrap; } .keybar button.on { border-color: var(--mint); color: var(--mint); }
 .actions { bottom: 40px; } .todo { bottom: 128px; } .tip { bottom: 186px; } .wheel { bottom: 120px; } .radio { bottom: 42px; } .mini { bottom: 42px; } .caption { bottom: calc(5vh + 34px); } .svc.corner { bottom: 34px; } .hacker .radio { bottom: auto; } .end { padding-bottom: 46px; } .menu { padding-bottom: 46px; }
+
+.big.dark { background: #3a0f18; border: 1px solid var(--red); }
+.link { background: none; border: 0; color: var(--mint); text-decoration: underline; padding: 0; font-weight: 700; }
+.steps .bad { border-color: var(--red) !important; } .steps .bad > b { background: var(--red) !important; color: #fff !important; }
+.you { font-size: 19px; font-weight: 800; color: var(--gold); margin: 0 0 8px; }
+.intro.story { padding: 0 10vw; } .intro.story p { max-width: 60ch; margin: 0 auto 10px; letter-spacing: 0; font-size: 22px; }
+.research { position: fixed; inset: 0; background: #05060ce0; display: grid; place-items: center; z-index: 30; padding: 16px; }
+.research > .panel { width: min(1240px, 96vw); max-height: 92vh; overflow: auto; } .research header { display: flex; justify-content: space-between; align-items: center; gap: 12px; } .research h2 { margin: 0; }
+.research header button { background: #1b2342; border: 1px solid var(--line); border-radius: 8px; padding: 6px 14px; margin-left: 8px; }
+.rsteps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 14px 0; }
+.rsteps section { background: #ffffff08; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; opacity: 0.12; transform: translateY(10px); transition: all 0.6s; font-size: 14px; } .rsteps .in { opacity: 1; transform: none; }
+.rsteps h3 { margin: 0 0 8px; font-size: 16px; } .rsteps h3 > b { background: var(--gold); color: #000; border-radius: 50%; display: inline-grid; place-items: center; width: 24px; height: 24px; margin-right: 6px; font-size: 13px; } .rsteps h3 em { display: inline-block; font-style: normal; font-size: 11px; color: var(--v); border: 1px solid var(--v); border-radius: 99px; padding: 1px 8px; margin-left: 4px; }
+.rsteps p { margin: 6px 0; } .rsteps .q small { opacity: 0.6; white-space: nowrap; } .rsteps a { color: var(--mint); display: block; margin: 4px 0; font-size: 13px; }
+.funnel > div { background: #e86bff22; border-left: 4px solid #e86bff; padding: 8px 10px; margin-bottom: 6px; } .funnel strong { font-size: 24px; margin-right: 6px; }
+.rbar { display: grid; grid-template-columns: 112px 1fr 58px; gap: 8px; align-items: center; margin: 7px 0; } .rbar .bar { width: 100%; } .rbar .bar i { transition: width 1.2s; background: #7788aa; } .rbar.first { font-weight: 800; } .rbar.first .bar i { background: var(--gold); }
+.pick { font-size: 26px; font-weight: 900; color: var(--red); line-height: 1.1; }
+@media (max-width: 1000px) { .rsteps { grid-template-columns: 1fr; } }

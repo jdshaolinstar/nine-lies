@@ -69,6 +69,7 @@ export default function Hud({ s, send, scan, scenario }) {
       else if (e.code === 'KeyE') send({ t: 'act', a: 'yarn' })
       else if (e.code === 'KeyV') send({ t: 'callVote' })
       else if (e.code === 'KeyX') send({ t: 'scan' })
+      else if (e.code === 'KeyT') send({ t: 'tip' })
       else if (e.code === 'KeyQ') setWheel((w) => (w ? null : { to: 'all' }))
       else if (e.code === 'Escape') setWheel(null)
       else if (/^Digit[1-9]$/.test(e.code) && wheelRef.current) {
@@ -114,19 +115,27 @@ export default function Hud({ s, send, scan, scenario }) {
     <>
       <div className="vignette" style={{ opacity: danger }} />
       <div className="top">
-        <Steps s={s} step={g.step} />
+        {s.traitor ? <div className="steps"><div className="now bad"><b>!</b><span>You are the traitor<small>Stop the heist before the clock runs out. Dogs won&apos;t hurt you.</small></span></div><Steps s={s} step={g.step} /></div> : <Steps s={s} step={g.step} />}
         <div className={'timer small' + (s.timeLeft < 45 ? ' hot' : '')}>{clock(s.timeLeft)}</div>
       </div>
 
       {intro && !out && (
         <div className="howto panel">
           <p className="kicker">{scenario.title}</p>
+          {s.traitor ? <>
+            <h2>You are <span style={{ color: me?.color }}>{me?.name}</span>, the <span style={{ color: '#ff3048' }}>traitor</span>.</h2>
+            <ul>
+              <li><b>The dogs pay you 9 million fish</b> if this heist fails.</li>
+              <li><b>Press T</b> to tell the dogs where a crewmate is.</li>
+              <li><b>Catch someone alone, get behind them, press SPACE.</b> Don&apos;t be seen.</li>
+            </ul>
+          </> : <>
           <h2>You are <span style={{ color: me?.color }}>{me?.name}</span>. Steal the core.</h2>
           <ul>
             <li><b>Follow the glowing dots.</b> They always lead to your next step.</li>
             <li><b>Stay out of the dogs&apos; light cones.</b> Shift to run, C to sneak.</li>
             <li><b>One crewmate is paid by the dogs.</b> If time runs out, they win.</li>
-          </ul>
+          </ul></>}
           <p className="dim">Move with WASD to begin</p>
         </div>
       )}
@@ -143,7 +152,7 @@ export default function Hud({ s, send, scan, scenario }) {
       {s.heardShot && <div className="banner shot">BANG! Gunshot to the {s.heardShot}</div>}
       {s.blackout > 0 && <div className="banner soft">Lights out! {s.blackout.toFixed(0)}s</div>}
 
-      {!out && trouble && !s.vote && !me?.calledVote && (
+      {!out && !s.traitor && trouble && !s.vote && !me?.calledVote && (
         <div className="suspect">
           <b style={{ color: trouble.color }}>{trouble.name}</b> {dead ? 'is dead.' : `hasn't been seen for ${trouble.lastSeen ? trouble.lastSeen.ago + 's' : 'a while'}.`}
           {s.scansLeft > 0 && <button onClick={() => send({ t: 'scan' })}><kbd>X</kbd> Check alibis</button>}
@@ -156,7 +165,8 @@ export default function Hud({ s, send, scan, scenario }) {
           <Btn k="Space" label="Claw" cd={me.clawCd} off={me.carry} onClick={() => send({ t: 'act', a: 'claw' })} />
           <Btn k="F" label={me.bullets ? 'Shoot (1 bullet)' : 'No bullet'} off={!me.bullets || me.carry} onClick={() => send({ t: 'act', a: 'shoot' })} />
           <Btn k="Q" label="Talk" onClick={() => setWheel({ to: 'all' })} />
-          {dogNear && me.yarn > 0 && <Btn k="E" label={`Yarn: distract dogs ×${me.yarn}`} onClick={() => send({ t: 'act', a: 'yarn' })} />}
+          {s.traitor && <Btn k="T" label="Tip off the dogs" cd={s.tipIn} onClick={() => send({ t: 'tip' })} />}
+          {!s.traitor && dogNear && me.yarn > 0 && <Btn k="E" label={`Yarn: distract dogs ×${me.yarn}`} onClick={() => send({ t: 'act', a: 'yarn' })} />}
         </div>
       )}
 

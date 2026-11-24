@@ -41,7 +41,7 @@ export function narrate(e, s) {
   }
 }
 
-export default function Watch({ s, services }) {
+export default function Watch({ s, services, scenario }) {
   const [lines, setLines] = useState([])
   const seen = useRef(0)
   useEffect(() => {
@@ -52,7 +52,7 @@ export default function Watch({ s, services }) {
     if (out.length) setLines((p) => [...p, ...out].slice(-6))
   }, [s])
   const last = lines[lines.length - 1]
-  const show = last && s.t - last.t < 6
+  const show = last && s.t - last.t < (s.t < 12 ? 12 : 6)
   return (
     <>
       <div className="top"><Steps s={s} step={stepOf(s)} /><div className={'timer small' + (s.timeLeft < 45 ? ' hot' : '')}>{clock(s.timeLeft)}</div></div>
@@ -65,7 +65,8 @@ export default function Watch({ s, services }) {
         ))}
       </div>
       <div className="feed">{lines.slice(0, -1).slice(-3).map((l) => <p key={l.n}><time>{clock(l.t)}</time>{l.big}</p>)}</div>
-      {show && <div className={'caption' + (last.hot ? ' hot' : '')} key={last.n}><b>{last.big}</b>{last.small && <span>{last.small}</span>}</div>}
+      {s.t < 5 && scenario && <div className="intro story"><p>{scenario.villain}: “{scenario.villainLine}”</p><h2>{scenario.title}</h2></div>}
+      {show && s.t >= 4.5 && <div className={'caption' + (last.hot ? ' hot' : '')} key={last.n}><b>{last.big}</b>{last.small && <span>{last.small}</span>}</div>}
       <VoteResult s={s} />
       {services && <p className="svc corner">{Object.entries(services).filter(([, v]) => v).map(([k]) => <span key={k} className="on">{k}</span>)}</p>}
     </>

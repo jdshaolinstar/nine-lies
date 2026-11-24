@@ -1,8 +1,8 @@
 import { Session } from '../shared/session.js'
 
 // Two ways to play: on the server with other people, or alone in this tab.
-export function connectLocal(onMsg) {
-  const session = new Session({ services: { local: true } })
+export function connectLocal(onMsg, scenario) {
+  const session = new Session({ services: { local: true }, scenario })
   let client
   const queue = []
   const send = (m) => (client ? onMsg(m) : queue.push(m))

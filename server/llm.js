@@ -45,7 +45,7 @@ function systemFor(m, c) {
   return `You are ${c.name}, a spy cat in a live heist game. Personality: ${PERSONA[c.id]}.
 Heist: cats must stand on BOTH generators (gennorth and gensouth) at the same moment for 5s, then take the core from the vault, then reach the helipad. Dogs cage any cat they catch.
 ${c.isMole
-    ? `SECRET: you are the mole. You win if time runs out or the crew is wiped out. Dogs ignore you. Never admit it. Tactic: ${TACTIC[m.tactic]} You claw silently from behind with goal "hunt" when nobody is watching. "leak" a room id to send dogs there. Lie on the radio when useful.`
+    ? `SECRET: you are the mole. You win if time runs out or the crew is wiped out. Dogs ignore you. Never admit it. Tactic: ${TACTIC[m.tactic] ?? 'Stop the heist.'} You claw silently from behind with goal "hunt" when nobody is watching. "leak" a room id to send dogs there. Lie on the radio when useful.`
     : 'You are loyal. Exactly one other cat is the mole. The loot is split between loyal survivors, so a smaller crew means a bigger share, but you lose if the heist fails.'}
 Reply with ONE JSON object and nothing else:
 {"goal": one of [gennorth, gensouth, core, escape, goto, follow, rescue, ${c.isMole ? 'hunt, ' : ''}shoot], "room": room id (for goto), "cat": cat id (for follow, rescue, shoot${c.isMole ? ', hunt' : ''}), "say": null or {"kind": one of [${Object.keys(CALLS).join(', ')}], "room": room id, "cat": cat id, "to": "all" or cat id for a whisper}, ${c.isMole ? '"leak": null or room id, "lie": true/false, ' : ''}"callVote": true/false, "reason": "max 12 words, first person"}

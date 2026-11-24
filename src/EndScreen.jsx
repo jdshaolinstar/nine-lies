@@ -7,7 +7,7 @@ import { VendorTotals } from './Debug.jsx'
 
 const TACTIC = { early_strike: 'Strike early', late_strike: 'Strike late', leak_only: 'Leak, never kill', frame: 'Frame someone' }
 
-export default function EndScreen({ s, learning, vlog, again }) {
+export default function EndScreen({ s, learning, vlog, again, menu }) {
   const r = s.result
   const name = (id) => s.crew.find((c) => c.id === id)?.name ?? (String(id ?? '').startsWith('dog') ? 'A dog' : 'Someone')
   const mole = s.crew.find((c) => c.id === r.mole)
@@ -36,18 +36,20 @@ export default function EndScreen({ s, learning, vlog, again }) {
     <div className="end">
       <div className="panel result">
         <p className="kicker">{r.winner === 'crew' ? 'Heist complete' : 'The dogs win'}</p>
-        <h1 className={r.winner}>{r.why}</h1>
-        <p>The mole was <b style={{ color: mole?.color }}>{mole?.name}</b>. Tactic: <b>{TACTIC[r.tactic]}</b>. {r.moleCaught ? 'They were caught.' : 'They were never caught.'}</p>
+        <h1 className={'won-' + r.winner}>{r.why}</h1>
+        <p>The traitor was <b style={{ color: mole?.color }}>{mole?.name}</b>. {TACTIC[r.tactic] ? <>Tactic: <b>{TACTIC[r.tactic]}</b>.</> : 'Played by a person.'} {r.moleCaught ? 'They were caught.' : 'They were never caught.'}</p>
+        {s.you && <p className="you">{s.you === r.mole ? (r.winner === 'mole' && !r.moleCaught ? 'You were the traitor, and you got away with it.' : r.winner === 'mole' ? 'The dogs won, but you were caught. No pay for you.' : 'You were the traitor, and the crew beat you.') : r.escaped.includes(s.you) ? 'You escaped with the loot!' : r.winner === 'crew' ? 'The crew won, but left without you.' : 'You lost this one.'}</p>}
+        {r.winner === 'mole' && <p>{r.spyPaid ? <>The dogs pay {mole?.name} <b>{r.spyPaid.toLocaleString()} fish</b>.</> : <>The dogs keep all 9,000,000 fish. Their spy was caught, so they pay nobody.</>}</p>}
         {r.winner === 'crew' && r.escaped.length > 0 && <p>Loot split {r.escaped.length} way{r.escaped.length > 1 ? 's' : ''}: <b>{r.share.toLocaleString()} fish</b> each for {r.escaped.map(name).join(', ')}.</p>}
         {learning && (
           <div className="learn">
-            <h3>What the mole has learned</h3>
+            <h3>What AI traitors have learned</h3>
             {Object.entries(learning).map(([k, v]) => (
               <div key={k} className={k === r.tactic ? 'now' : ''}><span>{TACTIC[k]}</span><div className="bar"><i style={{ width: `${((v.wins + 1) / (v.plays + 2)) * 100}%` }} /></div><small>{v.wins}/{v.plays} won</small></div>
             ))}
           </div>
         )}
-        <button className="big" onClick={again}>Play again</button>
+        <div className="row"><button className="big" onClick={again}>Again</button><button className="big alt" onClick={menu}>Menu</button></div>
         {vlog?.length > 0 && <><h3>What each vendor did this match</h3><VendorTotals log={vlog} /></>}
       </div>
       <div className="panel story">

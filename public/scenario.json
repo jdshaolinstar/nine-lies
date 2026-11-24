@@ -1,0 +1,124 @@
+{
+  "id": "viral-double_cross",
+  "title": "The Glowing Core",
+  "villain": "Baron Barkington",
+  "villainLine": "Guard the glowing kibble well, you mangy felines!",
+  "target": "sparkling sun-mote sphere",
+  "briefing": "Hold both generators, take the core, reach the helipad. One cat is a mole.",
+  "setPiece": "double_cross",
+  "accent": "#ff3048",
+  "sources": [
+    {
+      "title": "The 12 best spy movies of all time, ranked",
+      "url": "https://www.thedigitalfix.com/best-spy-movies"
+    },
+    {
+      "title": "10 Best Spy Movie Performances, Ranked",
+      "url": "https://collider.com/spy-movies-performances-best-ranked"
+    },
+    {
+      "title": "Top Spy Movies | International Spy Museum",
+      "url": "https://www.spymuseum.org/education-programs/adults/top-spy-movies"
+    },
+    {
+      "title": "20 Greatest Spy Movies of All Time, Ranked",
+      "url": "https://collider.com/best-spy-movies-of-all-time-ranked"
+    },
+    {
+      "title": "Akshaye Khanna's Viral Entry Scene in Dhurandhar: The FA9LA 'Jamaal Kudu' Moment Explained! (2026)",
+      "url": "https://tekstremediving.com/article/akshaye-khanna-s-viral-entry-scene-in-dhurandhar-the-fa9la-jamaal-kudu-moment-explained"
+    }
+  ],
+  "why": "Telem found 131 pages about the spy and heist scenes people love. Double cross led with 11.",
+  "research": {
+    "queries": [
+      {
+        "q": "most iconic spy movie scenes of all time ranked",
+        "results": 42
+      },
+      {
+        "q": "best heist movie scenes fans love most",
+        "results": 42
+      },
+      {
+        "q": "viral spy thriller scene social media reaction 2026",
+        "results": 42
+      },
+      {
+        "q": "what makes a spy movie scene memorable to audiences",
+        "results": 42
+      },
+      {
+        "q": "fan favorite moments in spy and heist movies discussion",
+        "results": 42
+      }
+    ],
+    "providers": [
+      "exa",
+      "tavily",
+      "brave",
+      "parallel",
+      "ceramic",
+      "seltz",
+      "you"
+    ],
+    "found": 210,
+    "unique": 167,
+    "kept": 131,
+    "board": [
+      {
+        "id": "double_cross",
+        "pages": 11,
+        "score": 7.41
+      },
+      {
+        "id": "rooftop",
+        "pages": 8,
+        "score": 4.9
+      },
+      {
+        "id": "blackout",
+        "pages": 5,
+        "score": 2.38
+      },
+      {
+        "id": "wire_drop",
+        "pages": 3,
+        "score": 1.6
+      },
+      {
+        "id": "laser_hall",
+        "pages": 0,
+        "score": 0
+      }
+    ]
+  },
+  "board": [
+    {
+      "id": "double_cross",
+      "pages": 11,
+      "score": 7.41
+    },
+    {
+      "id": "rooftop",
+      "pages": 8,
+      "score": 4.9
+    },
+    {
+      "id": "blackout",
+      "pages": 5,
+      "score": 2.38
+    },
+    {
+      "id": "wire_drop",
+      "pages": 3,
+      "score": 1.6
+    },
+    {
+      "id": "laser_hall",
+      "pages": 0,
+      "score": 0
+    }
+  ],
+  "researchedAt": "2026-11-23T23:50:11.761Z"
+}
