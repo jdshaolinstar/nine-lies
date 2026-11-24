@@ -183,3 +183,6 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--gold); outl
 .rbar { display: grid; grid-template-columns: 112px 1fr 58px; gap: 8px; align-items: center; margin: 7px 0; } .rbar .bar { width: 100%; } .rbar .bar i { transition: width 1.2s; background: #7788aa; } .rbar.first { font-weight: 800; } .rbar.first .bar i { background: var(--gold); }
 .pick { font-size: 26px; font-weight: 900; color: var(--red); line-height: 1.1; }
 @media (max-width: 1000px) { .rsteps { grid-template-columns: 1fr; } }
+
+.eyes { margin: 0 6px 8px; font-size: 14px; font-weight: 700; color: #fff; text-align: center; }
+.tools { grid-template-columns: repeat(2, 1fr); } .tools button { padding: 18px 4px; font-size: 16px; }

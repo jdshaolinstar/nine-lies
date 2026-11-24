@@ -159,8 +159,8 @@ function Menu({ status, enter, name, setName, scenario, openResearch }) {
       </div>
       <div className="row small">
         <button onClick={() => enter(mode, 'director', { alone: true, cine: true })}>Cinematic (for video, Esc to exit)</button>
-        {status && <button onClick={() => enter('server', 'runner')}>Play with friends</button>}
-        {status && <button onClick={() => enter('server', 'hacker')}>Join as hacker</button>}
+        {status && <button onClick={() => enter('server', 'runner')}>Play with friends (phone hacker)</button>}
+        {status && <button onClick={() => enter('server', 'hacker')}>Join a friend as hacker</button>}
         {status && <button onClick={() => enter('server', 'director')}>Join as spectator</button>}
       </div>
       <p className="keys"><b>1. Power:</b> two cats stand on two rings at once. <b>2. Core:</b> grab it. <b>3. Escape:</b> reach the H. One cat is paid by the dogs to stop you.</p>

@@ -46,7 +46,7 @@ export default function Hacker({ s, send, scan }) {
         g.fillStyle = '#5fe0b0'
         g.globalAlpha = 0.75
         g.fillText(r.name.toUpperCase(), px(r.x + r.w / 2), px(r.z + r.h / 2))
-        if (r.cam) g.fillText(st.camLoop.includes(r.id) ? '◉ LOOPED' : '◉ CAM', px(r.x + r.w / 2), px(r.z + r.h / 2 + 1.3))
+        if (r.cam) g.fillText(st.camLoop.includes(r.id) ? '◉ BLIND' : '◉ CAM', px(r.x + r.w / 2), px(r.z + r.h / 2 + 1.3))
         g.globalAlpha = 1
       }
       for (const gen of GENERATORS) {
@@ -102,21 +102,19 @@ export default function Hacker({ s, send, scan }) {
       if (d.q < 2.6) send({ t: 'hack', a: 'door', id: d.o.id })
     } else if (t === 'ping') { if (dog && dog.q < 3) send({ t: 'hack', a: 'ping', id: dog.d.id }) }
     else if (room && t === 'cam') send({ t: 'hack', a: 'cam', id: room.id })
-    else if (room && t === 'alarm') send({ t: 'hack', a: 'alarm', id: room.id })
-    else if (room && ['guard', 'clear', 'going'].includes(t)) send({ t: 'radio', kind: t, room: room.id })
   }
 
-  const tools = [['door', 'Doors'], ['ping', 'Ping dog'], ['cam', 'Loop cam'], ['alarm', 'Bait alarm'], ['guard', 'Call: dog'], ['clear', 'Call: clear'], ['going', 'Call: go']]
-  const hint = { door: 'Tap a door to lock or open it', ping: 'Tap a dog to show it to the runner', cam: 'Tap a camera room', alarm: 'Tap a room to lure dogs there', guard: 'Tap the room with the dog', clear: 'Tap a safe room', going: 'Tap where they should go' }
+  const tools = [['door', 'Lock a door'], ['ping', 'Show a dog'], ['cam', 'Blind a camera']]
+  const hint = { door: 'Tap a door to lock or open it', ping: 'Tap a dog (orange dot) to show it to your crew', cam: 'Tap a room marked CAM' }
   return (
     <div className="hacker">
       <div className="hk-top"><b>{clock(s.timeLeft)}</b><span>{s.core.taken ? 'Core is out!' : s.vaultOpen ? 'Vault open' : `Generators: ${s.gens.filter((g) => g.held).length}/2`}</span></div>
+      <p className="eyes">You&apos;re the crew&apos;s eyes. Show them the dogs and lock doors behind them.</p>
       <canvas ref={ref} onPointerDown={tap} />
       <p className="hint">{hint[tool]}</p>
       <div className="tools">
         {tools.map(([id, l]) => <button key={id} className={(tool === id ? 'sel ' : '') + (s.hackCd[id] > 0.1 ? 'off' : '')} onClick={() => setTool(id)}>{l}{s.hackCd[id] > 0.5 ? ` ${s.hackCd[id].toFixed(0)}` : ''}</button>)}
-        <button className={'danger' + (s.hackCd.blackout > 0.1 ? ' off' : '')} onClick={() => send({ t: 'hack', a: 'blackout', id: 'all' })}>BLACKOUT{s.hackCd.blackout > 0.5 ? ` ${s.hackCd.blackout.toFixed(0)}` : ''}</button>
-        <button className={s.scansLeft ? '' : 'off'} onClick={() => send({ t: 'scan' })}>Scan ×{s.scansLeft}</button>
+        <button className={'danger' + (s.hackCd.blackout > 0.1 ? ' off' : '')} onClick={() => send({ t: 'hack', a: 'blackout', id: 'all' })}>Lights out{s.hackCd.blackout > 0.5 ? ` ${s.hackCd.blackout.toFixed(0)}` : ''}</button>
       </div>
       <Radio s={s} />
       <ScanBox scan={scan} />
